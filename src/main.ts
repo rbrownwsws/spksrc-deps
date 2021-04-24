@@ -10,7 +10,8 @@ import * as child_process from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 
-import { createGithubResolver } from "./resolver/github.js";
+import { createGithubReleaseIndexer } from "./release-indexers/github.js";
+import { Resolver, createResolver, ResolvedVersionsKind } from "./resolver.js";
 
 async function run(): Promise<void> {
   try {
@@ -27,7 +28,8 @@ async function run(): Promise<void> {
     }
     const octokit = github.getOctokit(githubToken) as Octokit;
 
-    const resolvers = [createGithubResolver(octokit)];
+    const releaseIndexers = [createGithubReleaseIndexer(octokit)];
+    const resolveLatestPkgVersions = createResolver(releaseIndexers);
 
     // Get make to generate package info
     core.info("Generating pkg-info.json files...");
@@ -55,7 +57,7 @@ async function run(): Promise<void> {
         // TODO: Nest another try-catch so we do not abort the entire thing
         //       on a single file failure.
         const pkgInfoData = JSON.parse(fs.readFileSync(pkgInfoFile, "utf-8"));
-        await getLatestVersion(pkgInfoData, resolvers);
+        await getLatestVersion(pkgInfoData, resolveLatestPkgVersions);
       } else {
         core.warning("Missing: " + pkgInfoFile);
       }
@@ -65,17 +67,13 @@ async function run(): Promise<void> {
   }
 }
 
-async function getLatestVersion(pkgInfo: PkgInfo, resolvers: Resolver[]) {
-  // Iterate through resolvers until we find one that works
-  let resolvedVersion = null;
-  let resolverIdx = 0;
-  while (resolvedVersion === null && resolverIdx < resolvers.length) {
-    resolvedVersion = await resolvers[resolverIdx](pkgInfo);
+async function getLatestVersion(
+  pkgInfo: PkgInfo,
+  resolveLatestPkgVersions: Resolver
+) {
+  let resolvedVersion = await resolveLatestPkgVersions(pkgInfo);
 
-    resolverIdx++;
-  }
-
-  if (resolvedVersion !== null) {
+  if (resolvedVersion.kind === ResolvedVersionsKind.SUCCESS) {
     if (
       resolvedVersion.currentVersion !== resolvedVersion.latestVersionMajor ||
       resolvedVersion.currentVersion !== resolvedVersion.latestVersionMinor ||
