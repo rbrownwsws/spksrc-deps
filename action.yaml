@@ -1,0 +1,9 @@
+name: spksrc-deps
+author: "Ross Brown <@rbrownwsws>"
+description: "Checks that spksrc packages are up-to-date"
+runs:
+  using: "node12"
+  main: "dist/main.js"
+branding:
+  icon: "package"
+  color: "gray-dark"

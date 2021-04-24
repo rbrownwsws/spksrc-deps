@@ -1,0 +1,72 @@
+{
+  "name": "spky",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "exports": {
+    ".": "./lib/main.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node ./lib/main.js",
+    "pretest": "npm run lint && tsc --noEmit",
+    "test": "npm run test:jest --",
+    "posttest": "npm run format",
+    "lint": "eslint . --cache --fix --ext .ts,.tsx",
+    "test:jest": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "format": "prettier --loglevel warn --write \"**/*.{ts,tsx,css,md}\"",
+    "package": "webpack"
+  },
+  "author": "Ross Brown",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@actions/core": "^1.2.7",
+    "@actions/github": "^4.0.0"
+  },
+  "devDependencies": {
+    "@octokit/webhooks": "^9.1.2",
+    "@tsconfig/node12": "^1.0.7",
+    "@types/jest": "^26.0.22",
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.24.0",
+    "eslint-config-prettier": "^8.2.0",
+    "husky": "^6.0.0",
+    "jest": "^26.6.3",
+    "lint-staged": "^10.5.4",
+    "prettier": "2.2.1",
+    "ts-jest": "^26.5.5",
+    "typescript": "^4.2.4",
+    "webpack": "^5.35.1",
+    "webpack-cli": "^4.6.0"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/lib/",
+      "<rootDir>/dist/"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --cache --fix",
+    "*.{ts,tsx,css,md}": "prettier --write"
+  }
+}
