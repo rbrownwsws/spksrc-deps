@@ -10,4 +10,5 @@ export default {
     path: path.resolve(__dirname, "dist"),
   },
   mode: "production",
+  target: "node12",
 };
