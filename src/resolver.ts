@@ -34,7 +34,7 @@ export const createResolver: (releaseIndexers: ReleaseIndexer[]) => Resolver = (
   releaseIndexers: ReleaseIndexer[]
 ) => async (pkgInfo: PkgInfo) => {
   // Clean up package version
-  const currentVersion = semver.clean(pkgInfo.PKG_VERS);
+  const currentVersion = semver.valid(semver.coerce(pkgInfo.PKG_VERS));
   if (currentVersion === null) {
     return { kind: ResolvedVersionsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
   }
@@ -66,26 +66,29 @@ export const createResolver: (releaseIndexers: ReleaseIndexer[]) => Resolver = (
 
   const releaseIterator = releaseIndex.getReleaseIterator();
   let releaseVersion = await releaseIterator.next();
-  while (
-    !releaseVersion.done &&
-    semver.gt(releaseVersion.value, currentVersion)
-  ) {
-    if (semver.gt(releaseVersion.value, newestMajorVersion)) {
-      newestMajorVersion = releaseVersion.value;
-    }
+  while (!releaseVersion.done) {
+    const cleanReleaseVersion = semver.valid(
+      semver.coerce(releaseVersion.value)
+    );
 
-    if (
-      semver.gt(releaseVersion.value, newestMinorVersion) &&
-      semver.satisfies(releaseVersion.value, minorVersionSelector)
-    ) {
-      newestMinorVersion = releaseVersion.value;
-    }
+    if (cleanReleaseVersion !== null) {
+      if (semver.gt(cleanReleaseVersion, newestMajorVersion)) {
+        newestMajorVersion = cleanReleaseVersion;
+      }
 
-    if (
-      semver.gt(releaseVersion.value, newestPatchVersion) &&
-      semver.satisfies(releaseVersion.value, patchVersionSelector)
-    ) {
-      newestPatchVersion = releaseVersion.value;
+      if (
+        semver.gt(cleanReleaseVersion, newestMinorVersion) &&
+        semver.satisfies(cleanReleaseVersion, minorVersionSelector)
+      ) {
+        newestMinorVersion = cleanReleaseVersion;
+      }
+
+      if (
+        semver.gt(cleanReleaseVersion, newestPatchVersion) &&
+        semver.satisfies(cleanReleaseVersion, patchVersionSelector)
+      ) {
+        newestPatchVersion = cleanReleaseVersion;
+      }
     }
 
     releaseVersion = await releaseIterator.next();

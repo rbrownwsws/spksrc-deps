@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Octokit } from "@octokit/rest";
-import semver from "semver";
 import { ReleaseIndexer, ReleaseIndexKind } from "./release-indexer.js";
 
 const githubRegex = /^https?:\/\/github.com\/([^\/]*)\/([^\/]*)\//;
@@ -24,17 +23,16 @@ const createGithubReleaseIndexer: (octokit: Octokit) => ReleaseIndexer = (
   return {
     kind: ReleaseIndexKind.SUPPORTED,
     getReleaseIterator: async function* () {
-      // FIXME: pagination
-      const releases = await octokit.repos.listReleases(pkgRepo);
-      for (const release of releases.data) {
-        if (!release.draft && !release.prerelease) {
-          const releaseVersion = semver.clean(release.tag_name);
-          if (releaseVersion === null) {
-            // Skip checking this release as it is not a valid semver version
-            continue;
+      // For each page of releases
+      for await (const response of octokit.paginate.iterator(
+        octokit.repos.listReleases,
+        pkgRepo
+      )) {
+        // For each release
+        for (const release of response.data) {
+          if (!release.draft && !release.prerelease) {
+            yield release.tag_name;
           }
-
-          yield releaseVersion;
         }
       }
     },
