@@ -3,11 +3,7 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./lib",
-    "module": "ES6",
-    "moduleResolution": "node",
-    "strict": true,
-    "noImplicitAny": true,
-    "esModuleInterop": true
+    "noImplicitAny": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "**/*.spec.ts"]
