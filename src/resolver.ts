@@ -7,9 +7,9 @@ import {
 } from "./release-indexers/release-indexer";
 
 export enum ResolvedVersionsKind {
-  ERR_NO_INDEXER,
-  ERR_UNSUPPORTED_VERSION_SYNTAX,
-  SUCCESS,
+  ERR_NO_INDEXER = "ERR_NO_INDEXER",
+  ERR_UNSUPPORTED_VERSION_SYNTAX = "ERR_UNSUPPORTED_VERSION_SYNTAX",
+  SUCCESS = "SUCCESS",
 }
 
 export interface ResolvedVersionsErr {
