@@ -71,7 +71,7 @@ async function getLatestVersion(
   pkgInfo: PkgInfo,
   resolveLatestPkgVersions: Resolver
 ) {
-  let resolvedVersion = await resolveLatestPkgVersions(pkgInfo);
+  const resolvedVersion = await resolveLatestPkgVersions(pkgInfo);
 
   if (resolvedVersion.kind === ResolvedVersionsKind.SUCCESS) {
     if (

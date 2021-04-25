@@ -3,7 +3,7 @@
 import { Octokit } from "@octokit/rest";
 import { ReleaseIndexer, ReleaseIndexKind } from "./ReleaseIndexer";
 
-const githubRegex = /^https?:\/\/github.com\/([^\/]*)\/([^\/]*)\//;
+const githubRegex = /^https?:\/\/github.com\/([^/]*)\/([^/]*)\//;
 
 export const createGithubReleaseIndexer: (
   octokit: Octokit
