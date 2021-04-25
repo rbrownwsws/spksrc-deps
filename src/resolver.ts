@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import semver from "semver";
 import { PkgInfo } from "./pkgInfo";
 import { ReleaseIndexer } from "./releaseIndexers";
+import { Version, VersionParser } from "./versionParsers";
 
 export enum ResolvedVersionsKind {
   ERR_NO_INDEX = "ERR_NO_INDEX",
@@ -17,21 +17,25 @@ export interface ResolvedVersionsErr {
 
 export interface ResolvedVersionsSuccess {
   kind: ResolvedVersionsKind.SUCCESS;
-  currentVersion: string;
-  latestVersionMajor: string;
-  latestVersionMinor: string;
-  latestVersionPatch: string;
+  currentVersion: Version;
+  latestVersionMajor: Version;
+  latestVersionMinor: Version;
+  latestVersionPatch: Version;
 }
 
 export type ResolvedVersions = ResolvedVersionsSuccess | ResolvedVersionsErr;
 
 export type Resolver = (pkgInfo: PkgInfo) => Promise<ResolvedVersions>;
 
-export const createResolver: (releaseIndexer: ReleaseIndexer) => Resolver = (
-  releaseIndexer: ReleaseIndexer
+export const createResolver: (
+  releaseIndexer: ReleaseIndexer,
+  versionParser: VersionParser
+) => Resolver = (
+  releaseIndexer: ReleaseIndexer,
+  versionParser: VersionParser
 ) => async (pkgInfo: PkgInfo) => {
   // Clean up package version
-  const currentVersion = semver.valid(semver.coerce(pkgInfo.PKG_VERS));
+  const currentVersion = versionParser.parse(pkgInfo.PKG_VERS);
   if (currentVersion === null) {
     return { kind: ResolvedVersionsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
   }
@@ -45,41 +49,45 @@ export const createResolver: (releaseIndexer: ReleaseIndexer) => Resolver = (
   }
 
   // Search for versions newer than the current version
-  const minorVersionSelector = "^" + currentVersion;
-  const patchVersionSelector = "~" + currentVersion;
-
   let newestMajorVersion = currentVersion;
   let newestMinorVersion = currentVersion;
   let newestPatchVersion = currentVersion;
 
   const releaseIterator = releaseIndex();
-  let releaseVersion = await releaseIterator.next();
-  while (!releaseVersion.done) {
-    const cleanReleaseVersion = semver.valid(
-      semver.coerce(releaseVersion.value)
-    );
+  let rawReleaseVersion = await releaseIterator.next();
+  while (!rawReleaseVersion.done) {
+    const releaseVersion = versionParser.parse(rawReleaseVersion.value);
 
-    if (cleanReleaseVersion !== null) {
-      if (semver.gt(cleanReleaseVersion, newestMajorVersion)) {
-        newestMajorVersion = cleanReleaseVersion;
+    if (releaseVersion !== null) {
+      if (
+        versionParser.isAllowedAsMajorUpgrade(
+          newestMajorVersion,
+          releaseVersion
+        )
+      ) {
+        newestMajorVersion = releaseVersion;
       }
 
       if (
-        semver.gt(cleanReleaseVersion, newestMinorVersion) &&
-        semver.satisfies(cleanReleaseVersion, minorVersionSelector)
+        versionParser.isAllowedAsMinorUpgrade(
+          newestMinorVersion,
+          releaseVersion
+        )
       ) {
-        newestMinorVersion = cleanReleaseVersion;
+        newestMinorVersion = releaseVersion;
       }
 
       if (
-        semver.gt(cleanReleaseVersion, newestPatchVersion) &&
-        semver.satisfies(cleanReleaseVersion, patchVersionSelector)
+        versionParser.isAllowedAsPatchUpgrade(
+          newestPatchVersion,
+          releaseVersion
+        )
       ) {
-        newestPatchVersion = cleanReleaseVersion;
+        newestPatchVersion = releaseVersion;
       }
     }
 
-    releaseVersion = await releaseIterator.next();
+    rawReleaseVersion = await releaseIterator.next();
   }
 
   return {

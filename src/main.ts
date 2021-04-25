@@ -12,9 +12,13 @@ import * as fs from "fs";
 
 import { PkgInfo } from "./pkgInfo";
 import {
-  createGithubReleaseIndexer,
   createMultiSourceReleaseIndexer,
+  createGithubReleaseIndexer,
 } from "./releaseIndexers";
+import {
+  createMultiKindVersionParser,
+  createNpmSemverVersionParser,
+} from "./versionParsers";
 import { Resolver, createResolver, ResolvedVersionsKind } from "./resolver";
 
 async function run(): Promise<void> {
@@ -35,7 +39,15 @@ async function run(): Promise<void> {
     const releaseIndexer = createMultiSourceReleaseIndexer([
       createGithubReleaseIndexer(octokit),
     ]);
-    const resolveLatestPkgVersions = createResolver(releaseIndexer);
+
+    const versionParser = createMultiKindVersionParser([
+      createNpmSemverVersionParser(),
+    ]);
+
+    const resolveLatestPkgVersions = createResolver(
+      releaseIndexer,
+      versionParser
+    );
 
     // Get make to generate package info
     core.info("Generating pkg-info.json files...");

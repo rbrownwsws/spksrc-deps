@@ -6,6 +6,7 @@ import {
   ResolvedVersions,
   ResolvedVersionsKind,
 } from "./resolver";
+import { createNpmSemverVersionParser } from "./versionParsers";
 
 function createDummyPkgInfo(): PkgInfo {
   return {
@@ -43,7 +44,7 @@ describe("Testing resolution", () => {
       "4.0.0",
     ]);
 
-    const resolve = createResolver(indexer);
+    const resolve = createResolver(indexer, createNpmSemverVersionParser());
     const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: "2.3.4" };
 
     test("Major 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 4.0.0", async () => {
@@ -58,7 +59,7 @@ describe("Testing resolution", () => {
         throw "Something has gone very wrong";
       }
 
-      expect(result.latestVersionMajor).toBe("4.0.0");
+      expect(result.latestVersionMajor.displayVersion).toBe("4.0.0");
     });
 
     test("Minor 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.4.0", async () => {
@@ -73,7 +74,7 @@ describe("Testing resolution", () => {
         throw "Something has gone very wrong";
       }
 
-      expect(result.latestVersionMinor).toBe("2.4.0");
+      expect(result.latestVersionMinor.displayVersion).toBe("2.4.0");
     });
 
     test("Patch 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.3.5", async () => {
@@ -88,7 +89,7 @@ describe("Testing resolution", () => {
         throw "Something has gone very wrong";
       }
 
-      expect(result.latestVersionPatch).toBe("2.3.5");
+      expect(result.latestVersionPatch.displayVersion).toBe("2.3.5");
     });
   });
 });
