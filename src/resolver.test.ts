@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { CursorResult } from "prettier";
-import {
-  ReleaseIndexer,
-  ReleaseIndexKind,
-} from "./release-indexers/release-indexer";
+import { ReleaseIndexer, ReleaseIndexKind } from "./release-indexers";
 import {
   createResolver,
   ResolvedVersions,
