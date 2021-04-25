@@ -25,7 +25,7 @@ async function run(): Promise<void> {
       throw { message: "GITHUB_WORKSPACE was not provided" };
     }
 
-    // FIXME: use an action input
+    // Get token for interacting with github api
     const githubToken = process.env.GITHUB_TOKEN;
     if (githubToken === undefined) {
       throw { message: "GITHUB_TOKEN was not provided" };
