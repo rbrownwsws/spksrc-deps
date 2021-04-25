@@ -10,7 +10,7 @@ import * as child_process from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 
-import { createGithubReleaseIndexer } from "./release-indexers/github";
+import { createGithubReleaseIndexer } from "./release-indexers";
 import { Resolver, createResolver, ResolvedVersionsKind } from "./resolver";
 
 async function run(): Promise<void> {

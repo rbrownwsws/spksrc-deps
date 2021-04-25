@@ -4,7 +4,7 @@ import {
   ReleaseIndexer,
   ReleaseIndex,
   ReleaseIndexKind,
-} from "./release-indexers/release-indexer";
+} from "./release-indexers";
 
 export enum ResolvedVersionsKind {
   ERR_NO_INDEXER = "ERR_NO_INDEXER",
