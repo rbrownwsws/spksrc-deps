@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import semver from "semver";
 import { PkgInfo } from "./pkgInfo";
-import {
-  ReleaseIndexer,
-  ReleaseIndex,
-  ReleaseIndexKind,
-} from "./releaseIndexers";
+import { ReleaseIndexer, ReleaseIndex } from "./releaseIndexers";
 
 export enum ResolvedVersionsKind {
   ERR_NO_INDEXER = "ERR_NO_INDEXER",
@@ -41,19 +37,16 @@ export const createResolver: (releaseIndexers: ReleaseIndexer[]) => Resolver = (
   }
 
   // Iterate through indexers until we find one that works
-  let releaseIndex: ReleaseIndex = { kind: ReleaseIndexKind.UNSUPPORTED };
+  let releaseIndex: ReleaseIndex | null = null;
   let indexerIdx = 0;
-  while (
-    releaseIndex.kind !== ReleaseIndexKind.SUPPORTED &&
-    indexerIdx < releaseIndexers.length
-  ) {
+  while (releaseIndex === null && indexerIdx < releaseIndexers.length) {
     releaseIndex = await releaseIndexers[indexerIdx](pkgInfo);
 
     indexerIdx++;
   }
 
   // If we did not find a working indexer just return the error
-  if (releaseIndex.kind !== ReleaseIndexKind.SUPPORTED) {
+  if (releaseIndex === null) {
     return { kind: ResolvedVersionsKind.ERR_NO_INDEXER };
   }
 
@@ -65,7 +58,7 @@ export const createResolver: (releaseIndexers: ReleaseIndexer[]) => Resolver = (
   let newestMinorVersion = currentVersion;
   let newestPatchVersion = currentVersion;
 
-  const releaseIterator = releaseIndex.getReleaseIterator();
+  const releaseIterator = releaseIndex();
   let releaseVersion = await releaseIterator.next();
   while (!releaseVersion.done) {
     const cleanReleaseVersion = semver.valid(

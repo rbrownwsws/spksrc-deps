@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { PkgInfo } from "./pkgInfo";
-import { ReleaseIndexer, ReleaseIndexKind } from "./releaseIndexers";
+import { ReleaseIndexer } from "./releaseIndexers";
 import {
   createResolver,
   ResolvedVersions,
@@ -22,16 +22,12 @@ function createDummyPkgInfo(): PkgInfo {
 
 function createFakeReleaseIndexer(releaseVersions: string[]): ReleaseIndexer {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  return async (pkgInfo: PkgInfo) => {
-    return {
-      kind: ReleaseIndexKind.SUPPORTED,
-      getReleaseIterator: async function* () {
-        for (const version of releaseVersions) {
-          yield version;
-        }
-      },
+  return async (pkgInfo: PkgInfo) =>
+    async function* () {
+      for (const version of releaseVersions) {
+        yield version;
+      }
     };
-  };
 }
 
 test("Trying to resolve with no indexer results in ERR_NO_INDEXER", async () => {

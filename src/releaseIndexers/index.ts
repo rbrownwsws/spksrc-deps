@@ -1,2 +1,2 @@
 export * from "./releaseIndexer";
-export { createGithubReleaseIndexer } from "./github";
+export { createGithubReleaseIndexer } from "./githubReleaseIndexer";
