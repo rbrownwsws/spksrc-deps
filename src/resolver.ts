@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 import semver from "semver";
 import { PkgInfo } from "./pkgInfo";
-import { ReleaseIndexer, ReleaseIndex } from "./releaseIndexers";
+import { ReleaseIndexer } from "./releaseIndexers";
 
 export enum ResolvedVersionsKind {
-  ERR_NO_INDEXER = "ERR_NO_INDEXER",
+  ERR_NO_INDEX = "ERR_NO_INDEX",
   ERR_UNSUPPORTED_VERSION_SYNTAX = "ERR_UNSUPPORTED_VERSION_SYNTAX",
   SUCCESS = "SUCCESS",
 }
 
 export interface ResolvedVersionsErr {
   kind:
-    | ResolvedVersionsKind.ERR_NO_INDEXER
+    | ResolvedVersionsKind.ERR_NO_INDEX
     | ResolvedVersionsKind.ERR_UNSUPPORTED_VERSION_SYNTAX;
 }
 
@@ -27,8 +27,8 @@ export type ResolvedVersions = ResolvedVersionsSuccess | ResolvedVersionsErr;
 
 export type Resolver = (pkgInfo: PkgInfo) => Promise<ResolvedVersions>;
 
-export const createResolver: (releaseIndexers: ReleaseIndexer[]) => Resolver = (
-  releaseIndexers: ReleaseIndexer[]
+export const createResolver: (releaseIndexer: ReleaseIndexer) => Resolver = (
+  releaseIndexer: ReleaseIndexer
 ) => async (pkgInfo: PkgInfo) => {
   // Clean up package version
   const currentVersion = semver.valid(semver.coerce(pkgInfo.PKG_VERS));
@@ -36,18 +36,12 @@ export const createResolver: (releaseIndexers: ReleaseIndexer[]) => Resolver = (
     return { kind: ResolvedVersionsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
   }
 
-  // Iterate through indexers until we find one that works
-  let releaseIndex: ReleaseIndex | null = null;
-  let indexerIdx = 0;
-  while (releaseIndex === null && indexerIdx < releaseIndexers.length) {
-    releaseIndex = await releaseIndexers[indexerIdx](pkgInfo);
+  // Get an index of releases
+  const releaseIndex = await releaseIndexer(pkgInfo);
 
-    indexerIdx++;
-  }
-
-  // If we did not find a working indexer just return the error
+  // If we did not find a working index just return the error
   if (releaseIndex === null) {
-    return { kind: ResolvedVersionsKind.ERR_NO_INDEXER };
+    return { kind: ResolvedVersionsKind.ERR_NO_INDEX };
   }
 
   // Search for versions newer than the current version

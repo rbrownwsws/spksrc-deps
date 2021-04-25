@@ -30,34 +30,20 @@ function createFakeReleaseIndexer(releaseVersions: string[]): ReleaseIndexer {
     };
 }
 
-test("Trying to resolve with no indexer results in ERR_NO_INDEXER", async () => {
-  /* Given */
-  const indexers: ReleaseIndexer[] = [];
-  const resolve = createResolver(indexers);
-  const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: "1.0.0" };
-
-  /* When */
-  const result: ResolvedVersions = await resolve(pkgInfo);
-
-  /* Then */
-  expect(result.kind).toBe(ResolvedVersionsKind.ERR_NO_INDEXER);
-});
-
 describe("Testing resolution", () => {
   describe("of SemVer", () => {
     /* Given */
-    const indexers: ReleaseIndexer[] = [
-      createFakeReleaseIndexer([
-        "1.0.0",
-        "2.0.0",
-        "2.3.4",
-        "2.3.5",
-        "2.4.0",
-        "3.0.0",
-        "4.0.0",
-      ]),
-    ];
-    const resolve = createResolver(indexers);
+    const indexer = createFakeReleaseIndexer([
+      "1.0.0",
+      "2.0.0",
+      "2.3.4",
+      "2.3.5",
+      "2.4.0",
+      "3.0.0",
+      "4.0.0",
+    ]);
+
+    const resolve = createResolver(indexer);
     const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: "2.3.4" };
 
     test("Major 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 4.0.0", async () => {

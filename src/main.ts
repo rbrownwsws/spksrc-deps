@@ -11,7 +11,10 @@ import * as path from "path";
 import * as fs from "fs";
 
 import { PkgInfo } from "./pkgInfo";
-import { createGithubReleaseIndexer } from "./releaseIndexers";
+import {
+  createGithubReleaseIndexer,
+  createMultiSourceReleaseIndexer,
+} from "./releaseIndexers";
 import { Resolver, createResolver, ResolvedVersionsKind } from "./resolver";
 
 async function run(): Promise<void> {
@@ -29,8 +32,10 @@ async function run(): Promise<void> {
     }
     const octokit = github.getOctokit(githubToken) as Octokit;
 
-    const releaseIndexers = [createGithubReleaseIndexer(octokit)];
-    const resolveLatestPkgVersions = createResolver(releaseIndexers);
+    const releaseIndexer = createMultiSourceReleaseIndexer([
+      createGithubReleaseIndexer(octokit),
+    ]);
+    const resolveLatestPkgVersions = createResolver(releaseIndexer);
 
     // Get make to generate package info
     core.info("Generating pkg-info.json files...");
