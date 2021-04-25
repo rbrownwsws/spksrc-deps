@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-interface PkgInfo {
+export interface PkgInfo {
   PKG_NAME: string;
   PKG_VERS: string;
   PKG_EXT: string;

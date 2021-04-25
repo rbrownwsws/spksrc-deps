@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import { ReleaseIndexer, ReleaseIndexKind } from "./release-indexers";
+import { PkgInfo } from "./pkgInfo";
+import { ReleaseIndexer, ReleaseIndexKind } from "./releaseIndexers";
 import {
   createResolver,
   ResolvedVersions,
@@ -20,6 +21,7 @@ function createDummyPkgInfo(): PkgInfo {
 }
 
 function createFakeReleaseIndexer(releaseVersions: string[]): ReleaseIndexer {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return async (pkgInfo: PkgInfo) => {
     return {
       kind: ReleaseIndexKind.SUPPORTED,

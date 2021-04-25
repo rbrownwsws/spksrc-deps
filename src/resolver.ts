@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import semver from "semver";
+import { PkgInfo } from "./pkgInfo";
 import {
   ReleaseIndexer,
   ReleaseIndex,
   ReleaseIndexKind,
-} from "./release-indexers";
+} from "./releaseIndexers";
 
 export enum ResolvedVersionsKind {
   ERR_NO_INDEXER = "ERR_NO_INDEXER",
