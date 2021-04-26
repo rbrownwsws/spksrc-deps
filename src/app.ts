@@ -108,7 +108,7 @@ export async function runApp(
       continue;
     }
 
-    core.info("Creating branch: " + prBranch);
+    core.info("[" + update.pkg.path.display + "] Creating branch: " + prBranch);
     await git.checkout(["-b", prBranch, originalBranch]);
 
     const fullPkgPath = path.join(
@@ -116,9 +116,9 @@ export async function runApp(
       update.pkg.path.prefix,
       update.pkg.path.dir
     );
-    const makefile = path.join(fullPkgPath, "Makefile");
 
-    core.info("Patching makefile: " + makefile);
+    core.info("[" + update.pkg.path.display + "] Patching makefile");
+    const makefile = path.join(fullPkgPath, "Makefile");
     const patchResponse = child_process.spawnSync("sed", [
       "-i",
       "s/^PKG_VERS\\s*=.*$/PKG_VERS = " + updateVersion.displayVersion + "/",
@@ -137,8 +137,8 @@ export async function runApp(
     // TODO: rerun `make pkg-info.json` and try to check the patch did what we
     //       wanted (in case of fancy stuff being done with PKG_VERS).
 
+    core.info("[" + update.pkg.path.display + "] Generating digests");
     const digestsFile = path.join(fullPkgPath, "digests");
-    core.info("Generating digests: " + digestsFile);
     const mkDigests = child_process.spawnSync("make", [
       "-C",
       fullPkgPath,
@@ -160,10 +160,9 @@ export async function runApp(
     core.info("Pushing PR branch");
     await git.push("origin", prBranch);
 
-    /*
-    core.info("Creating pull request");
+    core.info("[" + update.pkg.path.display + "] Creating pull request");
     const owner = "rbrownwsws";
-    const repo = " spksrc-deps-playground";
+    const repo = "spksrc-deps-playground";
 
     // FIXME: use me for the real thing!
     // const owner = github.context.repo.owner;
@@ -175,10 +174,34 @@ export async function runApp(
       head: prBranch,
       base: "master",
       title: commitMessage,
-      body: "",
-      maintainer_can_modify: true,
+      body:
+        "# Version info:\n" +
+        "\n" +
+        "| Type | Version |\n" +
+        "| - | - |\n" +
+        "| Current |" +
+        update.version.currentVersion.rawVersion +
+        " |\n" +
+        "| Patch upgrade |" +
+        update.version.latestVersionPatch.rawVersion +
+        " |\n" +
+        "| Minor upgrade |" +
+        update.version.latestVersionMinor.rawVersion +
+        " |\n" +
+        "| Major upgrade |" +
+        update.version.latestVersionMajor.rawVersion +
+        " |",
     });
-    */
+
+    const cooldown = 30000;
+    core.info(
+      "[" +
+        update.pkg.path.display +
+        "] Wait for " +
+        cooldown +
+        "ms to avoid GitHub abuse rate limit"
+    );
+    await new Promise((resolve) => setTimeout(resolve, cooldown));
 
     // TODO: Create issue using octokit?
 
@@ -187,6 +210,7 @@ export async function runApp(
 
   git.checkout(originalBranch);
   core.endGroup();
+  core.info("Done");
 }
 
 function findPackagePaths(workspacePath: string, pkgPrefixes: string[]) {
