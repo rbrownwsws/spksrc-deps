@@ -46,7 +46,13 @@ async function main(): Promise<void> {
     );
 
     // Run the app
-    await runApp(workspacePath, githubToken, resolveLatestPkgVersions);
+    await runApp(
+      workspacePath,
+      githubToken,
+      github.context.repo.owner,
+      github.context.repo.repo,
+      resolveLatestPkgVersions
+    );
   } catch (error) {
     core.setFailed(error.message);
   }

@@ -37,6 +37,8 @@ interface UpdatablePackage {
 export async function runApp(
   workspacePath: string,
   githubToken: string,
+  owner: string,
+  repo: string,
   resolveLatestPkgVersions: Resolver
 ): Promise<void> {
   core.startGroup("Find package paths");
@@ -64,9 +66,8 @@ export async function runApp(
 
   const octokit = github.getOctokit(githubToken) as Octokit;
 
-  // TODO: Uncomment this for the real thing
-  //await git.addConfig("user.name", "spksrc-deps");
-  //await git.addConfig("user.email", "spksrc-deps@synocommunity.github.io");
+  await git.addConfig("user.name", "spksrc-deps");
+  await git.addConfig("user.email", "spksrc-deps@synocommunity.github.io");
 
   // Make sure we have all the remote branches, not just the one we cloned.
   await git.fetch();
@@ -161,13 +162,6 @@ export async function runApp(
     await git.push("origin", prBranch);
 
     core.info("[" + update.pkg.path.display + "] Creating pull request");
-    const owner = "rbrownwsws";
-    const repo = "spksrc-deps-playground";
-
-    // FIXME: use me for the real thing!
-    // const owner = github.context.repo.owner;
-    // const repo = github.context.repo.repo;
-
     const prCreateResponse = await octokit.rest.pulls.create({
       owner: owner,
       repo: repo,
