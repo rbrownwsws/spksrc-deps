@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+
 import { PkgInfo } from "./pkgInfo";
 import { ReleaseIndexer } from "./releaseIndexers";
 import { Version, VersionParser } from "./versionParsers";
