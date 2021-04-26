@@ -111,12 +111,12 @@ export async function runApp(
     core.info("Creating branch: " + prBranch);
     await git.checkout(["-b", prBranch, originalBranch]);
 
-    const makefile = path.join(
+    const fullPkgPath = path.join(
       workspacePath,
       update.pkg.path.prefix,
-      update.pkg.path.dir,
-      "Makefile"
+      update.pkg.path.dir
     );
+    const makefile = path.join(fullPkgPath, "Makefile");
 
     core.info("Patching makefile: " + makefile);
     const patchResponse = child_process.spawnSync("sed", [
@@ -129,18 +129,32 @@ export async function runApp(
       core.error(patchResponse.error.message);
 
       // TODO: Clean up so things do not go horribly wrong from this point on
+      continue;
     }
+
+    await git.add(makefile);
 
     // TODO: rerun `make pkg-info.json` and try to check the patch did what we
     //       wanted (in case of fancy stuff being done with PKG_VERS).
 
-    // TODO: run `make digests`
+    const digestsFile = path.join(fullPkgPath, "digests");
+    core.info("Generating digests: " + digestsFile);
+    const mkDigests = child_process.spawnSync("make", [
+      "-C",
+      fullPkgPath,
+      "digests",
+    ]);
+
+    // TODO: Check `make digests` worked
+
+    await git.add(digestsFile);
+
+    // TODO: Try to fix PLIST (e.g. update mylib.1.so -> mylib.2.so)
 
     const commitMessage =
       "Bump " + update.pkg.path.display + " to " + updateVersion.displayVersion;
 
     core.info("Committing patch");
-    await git.add(makefile);
     await git.commit(commitMessage);
 
     core.info("Pushing PR branch");
