@@ -75,6 +75,8 @@ export async function runApp(
   const originalBranch = branches.current;
 
   for (const update of updatablePackages) {
+    const msgPrefix = "[" + update.pkg.path.display + "] ";
+
     // TODO: Create mechanism in makefile to select what kind of version we
     //       want to create PRs for (e.g. PKG_DEP_WARN=MINOR)
     const updateVersion = update.version.latestVersionMinor;
@@ -86,7 +88,8 @@ export async function runApp(
       updateVersion.displayVersion
     ) {
       console.info(
-        "Skipping " +
+        msgPrefix +
+          "Skipping " +
           update.pkg.path.display +
           " because there are no updates on the selected channel."
       );
@@ -102,14 +105,15 @@ export async function runApp(
       )
     ) {
       console.info(
-        "Skipping " +
+        msgPrefix +
+          "Skipping " +
           update.pkg.path.display +
           " because there is an existing PR branch."
       );
       continue;
     }
 
-    core.info("[" + update.pkg.path.display + "] Creating branch: " + prBranch);
+    core.info(msgPrefix + "Creating branch: " + prBranch);
     await git.checkout(["-b", prBranch, originalBranch]);
 
     const fullPkgPath = path.join(
@@ -118,7 +122,7 @@ export async function runApp(
       update.pkg.path.dir
     );
 
-    core.info("[" + update.pkg.path.display + "] Patching makefile");
+    core.info(msgPrefix + "Patching makefile");
     const makefile = path.join(fullPkgPath, "Makefile");
     const patchResponse = child_process.spawnSync("sed", [
       "-i",
@@ -138,7 +142,7 @@ export async function runApp(
     // TODO: rerun `make pkg-info.json` and try to check the patch did what we
     //       wanted (in case of fancy stuff being done with PKG_VERS).
 
-    core.info("[" + update.pkg.path.display + "] Generating digests");
+    core.info(msgPrefix + "Generating digests");
     const digestsFile = path.join(fullPkgPath, "digests");
     const mkDigests = child_process.spawnSync("make", [
       "-C",
@@ -155,13 +159,13 @@ export async function runApp(
     const commitMessage =
       "Bump " + update.pkg.path.display + " to " + updateVersion.displayVersion;
 
-    core.info("Committing patch");
+    core.info(msgPrefix + "Committing patch");
     await git.commit(commitMessage);
 
-    core.info("Pushing PR branch");
+    core.info(msgPrefix + "Pushing PR branch");
     await git.push("origin", prBranch);
 
-    core.info("[" + update.pkg.path.display + "] Creating pull request");
+    core.info(msgPrefix + "Creating pull request");
     const prCreateResponse = await octokit.rest.pulls.create({
       owner: owner,
       repo: repo,
@@ -189,11 +193,7 @@ export async function runApp(
 
     const cooldown = 30000;
     core.info(
-      "[" +
-        update.pkg.path.display +
-        "] Wait for " +
-        cooldown +
-        "ms to avoid GitHub abuse rate limit"
+      msgPrefix + "Wait for " + cooldown + "ms to avoid GitHub abuse rate limit"
     );
     await new Promise((resolve) => setTimeout(resolve, cooldown));
 
