@@ -8,39 +8,84 @@ import * as child_process from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 
-import { ResolvedVersionsKind, Resolver } from "./resolver";
+import {
+  ResolvedVersionsKind,
+  ResolvedVersionsSuccess,
+  Resolver,
+} from "./resolver";
 import { PkgInfo } from "./pkgInfo";
+
+interface PkgPath {
+  prefix: string;
+  dir: string;
+  display: string;
+}
+
+interface Package {
+  path: PkgPath;
+  info: PkgInfo;
+}
+
+interface UpdatablePackage {
+  pkg: Package;
+  version: ResolvedVersionsSuccess;
+}
 
 export async function runApp(
   workspacePath: string,
   githubToken: string,
   resolveLatestPkgVersions: Resolver
 ): Promise<void> {
+  core.startGroup("Find package paths");
+  const pkgPrefixes = ["cross", "native"];
+  const pkgPaths = findPackagePaths(workspacePath, pkgPrefixes);
+  core.endGroup();
+
+  core.startGroup("Generate pkg-info.json files");
   generatePkgInfoFiles(workspacePath);
+  core.endGroup();
 
-  const crossPkgsPath = path.join(workspacePath, "cross");
+  core.startGroup("Read package info");
+  const packages = getPackageInfo(workspacePath, pkgPaths);
+  core.endGroup();
 
-  const pkgInfoFiles = fs
-    .readdirSync(crossPkgsPath)
-    .map((name) => path.join(crossPkgsPath, name))
-    .filter((pkgPath) => fs.lstatSync(pkgPath).isDirectory())
-    .map((pkgPath) => path.join(pkgPath, "pkg-info.json"));
+  core.startGroup("Resolve latest package versions");
+  const updatablePackages = await getUpdatablePackages(
+    packages,
+    resolveLatestPkgVersions
+  );
+  core.endGroup();
+}
 
-  for (const pkgInfoFile of pkgInfoFiles) {
-    if (fs.existsSync(pkgInfoFile)) {
-      // TODO: Nest another try-catch so we do not abort the entire thing
-      //       on a single file failure.
-      const pkgInfoData = JSON.parse(fs.readFileSync(pkgInfoFile, "utf-8"));
-      await getLatestVersion(pkgInfoData, resolveLatestPkgVersions);
-    } else {
-      core.warning("Missing: " + pkgInfoFile);
-    }
+function findPackagePaths(workspacePath: string, pkgPrefixes: string[]) {
+  const pkgPaths: PkgPath[] = [];
+
+  // Find all the package directories
+  for (const prefix of pkgPrefixes) {
+    const fullPrefixPath = path.join(workspacePath, prefix);
+
+    // Get all objects in dir
+    fs.readdirSync(fullPrefixPath)
+      // Turn the objects into PkgPath objects
+      .map((name) => {
+        return { prefix: prefix, dir: name, display: prefix + "/" + name };
+      })
+      // Filter out objects that are not directories
+      .filter((pkgPath) =>
+        fs.lstatSync(path.join(fullPrefixPath, pkgPath.dir)).isDirectory()
+      )
+      // Put objects into pkgPaths array
+      .forEach((pkgPath) => {
+        core.info("Found package: " + pkgPath.display);
+        pkgPaths.push(pkgPath);
+      });
   }
+
+  return pkgPaths;
 }
 
 function generatePkgInfoFiles(workspacePath: string) {
   // Get make to generate package info
-  core.info("Generating pkg-info.json files...");
   const mkPkgInfo = child_process.spawnSync("make", [
     "-C",
     workspacePath,
@@ -50,36 +95,101 @@ function generatePkgInfoFiles(workspacePath: string) {
   if (mkPkgInfo.error !== undefined) {
     throw mkPkgInfo.error;
   }
-  core.info("Done");
 }
 
-async function getLatestVersion(
-  pkgInfo: PkgInfo,
+function getPackageInfo(workspacePath: string, pkgPaths: PkgPath[]): Package[] {
+  const packages: Package[] = [];
+
+  for (const pkgPath of pkgPaths) {
+    const pkgInfoFile = path.join(
+      workspacePath,
+      pkgPath.prefix,
+      pkgPath.dir,
+      "pkg-info.json"
+    );
+
+    if (!fs.existsSync(pkgInfoFile)) {
+      core.warning("Missing pkg-info.json for: " + pkgPath.display);
+
+      continue;
+    }
+
+    let rawPkgInfoData;
+    try {
+      rawPkgInfoData = fs.readFileSync(pkgInfoFile, "utf-8");
+    } catch (error) {
+      core.warning(
+        "Error while trying to read pkg-info.json for: " +
+          pkgPath.display +
+          ": " +
+          error
+      );
+
+      continue;
+    }
+
+    let pkgInfo: PkgInfo;
+    try {
+      pkgInfo = JSON.parse(rawPkgInfoData);
+    } catch (error) {
+      core.warning(
+        "Error while trying to parse pkg-info.json for: " +
+          pkgPath.display +
+          ": " +
+          error
+      );
+
+      continue;
+    }
+
+    core.info("Got package info for: " + pkgPath.display);
+    packages.push({
+      path: pkgPath,
+      info: pkgInfo,
+    });
+  }
+
+  return packages;
+}
+
+async function getUpdatablePackages(
+  packages: Package[],
   resolveLatestPkgVersions: Resolver
 ) {
-  const resolvedVersion = await resolveLatestPkgVersions(pkgInfo);
+  const updatablePackages: UpdatablePackage[] = [];
 
-  if (resolvedVersion.kind === ResolvedVersionsKind.SUCCESS) {
-    if (
-      resolvedVersion.currentVersion !== resolvedVersion.latestVersionMajor ||
-      resolvedVersion.currentVersion !== resolvedVersion.latestVersionMinor ||
-      resolvedVersion.currentVersion !== resolvedVersion.latestVersionPatch
-    ) {
-      core.info(
-        pkgInfo.PKG_NAME +
-          " is OLD: " +
-          resolvedVersion.currentVersion +
-          " > " +
-          resolvedVersion.latestVersionPatch +
-          " => " +
-          resolvedVersion.latestVersionMinor +
-          " ==> " +
-          resolvedVersion.latestVersionMajor
-      );
+  for (const pkg of packages) {
+    const resolvedVersion = await resolveLatestPkgVersions(pkg.info);
+
+    if (resolvedVersion.kind === ResolvedVersionsKind.SUCCESS) {
+      if (
+        resolvedVersion.currentVersion.displayVersion !==
+          resolvedVersion.latestVersionMajor.displayVersion ||
+        resolvedVersion.currentVersion.displayVersion !==
+          resolvedVersion.latestVersionMinor.displayVersion ||
+        resolvedVersion.currentVersion.displayVersion !==
+          resolvedVersion.latestVersionPatch.displayVersion
+      ) {
+        core.info(
+          pkg.path.display +
+            " is OLD: [" +
+            resolvedVersion.currentVersion.displayVersion +
+            "] > " +
+            resolvedVersion.latestVersionPatch.displayVersion +
+            " >> " +
+            resolvedVersion.latestVersionMinor.displayVersion +
+            " >>> " +
+            resolvedVersion.latestVersionMajor.displayVersion
+        );
+        updatablePackages.push({
+          pkg: pkg,
+          version: resolvedVersion,
+        });
+      } else {
+        core.info(pkg.path.display + " is UP-TO-DATE.");
+      }
     } else {
-      core.info(pkgInfo.PKG_NAME + " is OK.");
+      core.info(pkg.path.display + " is UNKNOWN.");
     }
-  } else {
-    core.info(pkgInfo.PKG_NAME + " is UNKNOWN.");
   }
 }
