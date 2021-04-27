@@ -19,6 +19,8 @@ function createDummyPkgInfo(): PkgInfo {
     PKG_DIR: "",
     PKG_DOWNLOAD_METHOD: "",
     PKG_GIT_HASH: "",
+    URLS: "",
+    DEPENDS: "",
   };
 }
 

@@ -9,4 +9,6 @@ export interface PkgInfo {
   PKG_DIR: string;
   PKG_DOWNLOAD_METHOD: string;
   PKG_GIT_HASH: string;
+  URLS: string;
+  DEPENDS: string;
 }

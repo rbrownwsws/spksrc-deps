@@ -82,9 +82,7 @@ export const createUpgradeResolver: (
     // Check if this is the release we are currently using
     if (
       release.value.artefacts.some(
-        (artefact) =>
-          artefact.downloadUrl ===
-          pkgInfo.PKG_DIST_SITE + "/" + pkgInfo.PKG_DIST_NAME
+        (artefact) => artefact.downloadUrl === pkgInfo.URLS
       )
     ) {
       upgradePaths.currentVersionRelease.release = release.value;
