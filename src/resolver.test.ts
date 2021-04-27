@@ -27,7 +27,10 @@ function createFakeReleaseIndexer(releaseVersions: string[]): ReleaseIndexer {
   return async (pkgInfo: PkgInfo) =>
     async function* () {
       for (const version of releaseVersions) {
-        yield version;
+        yield {
+          name: version,
+          artefacts: [],
+        };
       }
     };
 }

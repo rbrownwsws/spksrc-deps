@@ -2,6 +2,16 @@
 
 import { PkgInfo } from "../pkgInfo";
 
-export type ReleaseIndex = () => AsyncIterator<string, void, void>;
+export interface ReleaseArtefact {
+  name: string;
+  downloadUrl: string;
+}
+
+export interface Release {
+  name: string;
+  artefacts: ReleaseArtefact[];
+}
+
+export type ReleaseIndex = () => AsyncIterator<Release, void, void>;
 
 export type ReleaseIndexer = (pkgInfo: PkgInfo) => Promise<ReleaseIndex | null>;

@@ -2,7 +2,7 @@
 
 import { Octokit } from "@octokit/rest";
 import { PkgInfo } from "../pkgInfo";
-import { ReleaseIndexer } from "./releaseIndexer";
+import { Release, ReleaseIndexer } from "./releaseIndexer";
 
 const githubRegex = /^https?:\/\/github.com\/([^/]*)\/([^/]*)\//;
 
@@ -28,9 +28,21 @@ export const createGithubReleaseIndexer: (
       pkgRepo
     )) {
       // For each release
-      for (const release of response.data) {
-        if (!release.draft && !release.prerelease) {
-          yield release.tag_name;
+      for (const githubRelease of response.data) {
+        if (!githubRelease.draft && !githubRelease.prerelease) {
+          const release: Release = {
+            name: githubRelease.tag_name,
+            artefacts: [],
+          };
+
+          for (const artefact of githubRelease.assets) {
+            release.artefacts.push({
+              name: artefact.name,
+              downloadUrl: artefact.browser_download_url,
+            });
+          }
+
+          yield release;
         }
       }
     }

@@ -55,9 +55,9 @@ export const createResolver: (
   let newestPatchVersion = currentVersion;
 
   const releaseIterator = releaseIndex();
-  let rawReleaseVersion = await releaseIterator.next();
-  while (!rawReleaseVersion.done) {
-    const releaseVersion = versionParser.parse(rawReleaseVersion.value);
+  let release = await releaseIterator.next();
+  while (!release.done) {
+    const releaseVersion = versionParser.parse(release.value.name);
 
     if (releaseVersion !== null) {
       if (
@@ -88,7 +88,7 @@ export const createResolver: (
       }
     }
 
-    rawReleaseVersion = await releaseIterator.next();
+    release = await releaseIterator.next();
   }
 
   return {
