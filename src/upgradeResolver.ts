@@ -31,12 +31,12 @@ export interface UpgradePathsSuccess {
 
 export type UpgradePaths = UpgradePathsSuccess | UpgradePathsErr;
 
-export type Resolver = (pkgInfo: PkgInfo) => Promise<UpgradePaths>;
+export type UpgradeResolver = (pkgInfo: PkgInfo) => Promise<UpgradePaths>;
 
-export const createResolver: (
+export const createUpgradeResolver: (
   releaseIndexer: ReleaseIndexer,
   versionParser: VersionParser
-) => Resolver = (
+) => UpgradeResolver = (
   releaseIndexer: ReleaseIndexer,
   versionParser: VersionParser
 ) => async (pkgInfo: PkgInfo) => {

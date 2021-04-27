@@ -13,7 +13,7 @@ import {
   createMultiKindVersionParser,
   createNpmSemverVersionParser,
 } from "./versionParsers";
-import { createResolver } from "./resolver";
+import { createUpgradeResolver } from "./upgradeResolver";
 import { runApp } from "./app";
 
 async function main(): Promise<void> {
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
       createNpmSemverVersionParser(),
     ]);
 
-    const resolveLatestPkgVersions = createResolver(
+    const resolveLatestPkgVersions = createUpgradeResolver(
       releaseIndexer,
       versionParser
     );

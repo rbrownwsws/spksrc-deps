@@ -10,7 +10,11 @@ import * as child_process from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 
-import { UpgradePathsKind, UpgradePathsSuccess, Resolver } from "./resolver";
+import {
+  UpgradePathsKind,
+  UpgradePathsSuccess,
+  UpgradeResolver,
+} from "./upgradeResolver";
 import { PkgInfo } from "./pkgInfo";
 import { Octokit } from "@octokit/rest";
 
@@ -35,7 +39,7 @@ export async function runApp(
   githubToken: string,
   owner: string,
   repo: string,
-  resolveLatestPkgVersions: Resolver
+  resolveLatestPkgVersions: UpgradeResolver
 ): Promise<void> {
   core.startGroup("Find package paths");
   const pkgPrefixes = ["cross", "native"];
@@ -319,7 +323,7 @@ function getPackageInfo(workspacePath: string, pkgPaths: PkgPath[]): Package[] {
 
 async function getUpgradablePackages(
   packages: Package[],
-  resolveLatestPkgVersions: Resolver
+  resolveLatestPkgVersions: UpgradeResolver
 ): Promise<UpgradablePackage[]> {
   const updatablePackages: UpgradablePackage[] = [];
 

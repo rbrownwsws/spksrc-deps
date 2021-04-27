@@ -2,7 +2,11 @@
 
 import { PkgInfo } from "./pkgInfo";
 import { ReleaseIndexer } from "./releaseIndexers";
-import { createResolver, UpgradePaths, UpgradePathsKind } from "./resolver";
+import {
+  createUpgradeResolver,
+  UpgradePaths,
+  UpgradePathsKind,
+} from "./upgradeResolver";
 import { createNpmSemverVersionParser } from "./versionParsers";
 
 function createDummyPkgInfo(): PkgInfo {
@@ -44,7 +48,10 @@ describe("Testing resolution", () => {
       "4.0.0",
     ]);
 
-    const resolve = createResolver(indexer, createNpmSemverVersionParser());
+    const resolve = createUpgradeResolver(
+      indexer,
+      createNpmSemverVersionParser()
+    );
     const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: "2.3.4" };
 
     test("Major 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 4.0.0", async () => {
