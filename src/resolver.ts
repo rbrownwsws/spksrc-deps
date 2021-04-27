@@ -4,29 +4,29 @@ import { PkgInfo } from "./pkgInfo";
 import { ReleaseIndexer } from "./releaseIndexers";
 import { Version, VersionParser } from "./versionParsers";
 
-export enum ResolvedVersionsKind {
+export enum UpgradePathsKind {
   ERR_NO_INDEX = "ERR_NO_INDEX",
   ERR_UNSUPPORTED_VERSION_SYNTAX = "ERR_UNSUPPORTED_VERSION_SYNTAX",
   SUCCESS = "SUCCESS",
 }
 
-export interface ResolvedVersionsErr {
+export interface UpgradePathsErr {
   kind:
-    | ResolvedVersionsKind.ERR_NO_INDEX
-    | ResolvedVersionsKind.ERR_UNSUPPORTED_VERSION_SYNTAX;
+    | UpgradePathsKind.ERR_NO_INDEX
+    | UpgradePathsKind.ERR_UNSUPPORTED_VERSION_SYNTAX;
 }
 
-export interface ResolvedVersionsSuccess {
-  kind: ResolvedVersionsKind.SUCCESS;
+export interface UpgradePathsSuccess {
+  kind: UpgradePathsKind.SUCCESS;
   currentVersion: Version;
   latestVersionMajor: Version;
   latestVersionMinor: Version;
   latestVersionPatch: Version;
 }
 
-export type ResolvedVersions = ResolvedVersionsSuccess | ResolvedVersionsErr;
+export type UpgradePaths = UpgradePathsSuccess | UpgradePathsErr;
 
-export type Resolver = (pkgInfo: PkgInfo) => Promise<ResolvedVersions>;
+export type Resolver = (pkgInfo: PkgInfo) => Promise<UpgradePaths>;
 
 export const createResolver: (
   releaseIndexer: ReleaseIndexer,
@@ -38,7 +38,7 @@ export const createResolver: (
   // Clean up package version
   const currentVersion = versionParser.parse(pkgInfo.PKG_VERS);
   if (currentVersion === null) {
-    return { kind: ResolvedVersionsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
+    return { kind: UpgradePathsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
   }
 
   // Get an index of releases
@@ -46,7 +46,7 @@ export const createResolver: (
 
   // If we did not find a working index just return the error
   if (releaseIndex === null) {
-    return { kind: ResolvedVersionsKind.ERR_NO_INDEX };
+    return { kind: UpgradePathsKind.ERR_NO_INDEX };
   }
 
   // Search for versions newer than the current version
@@ -92,7 +92,7 @@ export const createResolver: (
   }
 
   return {
-    kind: ResolvedVersionsKind.SUCCESS,
+    kind: UpgradePathsKind.SUCCESS,
     currentVersion: currentVersion,
     latestVersionMajor: newestMajorVersion,
     latestVersionMinor: newestMinorVersion,

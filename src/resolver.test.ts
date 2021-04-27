@@ -2,11 +2,7 @@
 
 import { PkgInfo } from "./pkgInfo";
 import { ReleaseIndexer } from "./releaseIndexers";
-import {
-  createResolver,
-  ResolvedVersions,
-  ResolvedVersionsKind,
-} from "./resolver";
+import { createResolver, UpgradePaths, UpgradePathsKind } from "./resolver";
 import { createNpmSemverVersionParser } from "./versionParsers";
 
 function createDummyPkgInfo(): PkgInfo {
@@ -53,13 +49,13 @@ describe("Testing resolution", () => {
 
     test("Major 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 4.0.0", async () => {
       /* When */
-      const result: ResolvedVersions = await resolve(pkgInfo);
+      const result: UpgradePaths = await resolve(pkgInfo);
 
       /* Then */
-      expect(result.kind).toBe(ResolvedVersionsKind.SUCCESS);
+      expect(result.kind).toBe(UpgradePathsKind.SUCCESS);
 
       // Force TS to be happy
-      if (result.kind !== ResolvedVersionsKind.SUCCESS) {
+      if (result.kind !== UpgradePathsKind.SUCCESS) {
         throw "Something has gone very wrong";
       }
 
@@ -68,13 +64,13 @@ describe("Testing resolution", () => {
 
     test("Minor 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.4.0", async () => {
       /* When */
-      const result: ResolvedVersions = await resolve(pkgInfo);
+      const result: UpgradePaths = await resolve(pkgInfo);
 
       /* Then */
-      expect(result.kind).toBe(ResolvedVersionsKind.SUCCESS);
+      expect(result.kind).toBe(UpgradePathsKind.SUCCESS);
 
       // Force TS to be happy
-      if (result.kind !== ResolvedVersionsKind.SUCCESS) {
+      if (result.kind !== UpgradePathsKind.SUCCESS) {
         throw "Something has gone very wrong";
       }
 
@@ -83,13 +79,13 @@ describe("Testing resolution", () => {
 
     test("Patch 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.3.5", async () => {
       /* When */
-      const result: ResolvedVersions = await resolve(pkgInfo);
+      const result: UpgradePaths = await resolve(pkgInfo);
 
       /* Then */
-      expect(result.kind).toBe(ResolvedVersionsKind.SUCCESS);
+      expect(result.kind).toBe(UpgradePathsKind.SUCCESS);
 
       // Force TS to be happy
-      if (result.kind !== ResolvedVersionsKind.SUCCESS) {
+      if (result.kind !== UpgradePathsKind.SUCCESS) {
         throw "Something has gone very wrong";
       }
 

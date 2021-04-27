@@ -10,11 +10,7 @@ import * as child_process from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 
-import {
-  ResolvedVersionsKind,
-  ResolvedVersionsSuccess,
-  Resolver,
-} from "./resolver";
+import { UpgradePathsKind, UpgradePathsSuccess, Resolver } from "./resolver";
 import { PkgInfo } from "./pkgInfo";
 import { Octokit } from "@octokit/rest";
 
@@ -29,9 +25,9 @@ interface Package {
   info: PkgInfo;
 }
 
-interface UpdatablePackage {
+interface UpgradablePackage {
   pkg: Package;
-  version: ResolvedVersionsSuccess;
+  version: UpgradePathsSuccess;
 }
 
 export async function runApp(
@@ -55,7 +51,7 @@ export async function runApp(
   core.endGroup();
 
   core.startGroup("Resolve latest package versions");
-  const updatablePackages: UpdatablePackage[] = await getUpdatablePackages(
+  const upgradablePackages: UpgradablePackage[] = await getUpgradablePackages(
     packages,
     resolveLatestPkgVersions
   );
@@ -74,7 +70,7 @@ export async function runApp(
   const branches = await git.branch();
   const originalBranch = branches.current;
 
-  for (const update of updatablePackages) {
+  for (const update of upgradablePackages) {
     const msgPrefix = "[" + update.pkg.path.display + "] ";
 
     // TODO: Create mechanism in makefile to select what kind of version we
@@ -313,16 +309,16 @@ function getPackageInfo(workspacePath: string, pkgPaths: PkgPath[]): Package[] {
   return packages;
 }
 
-async function getUpdatablePackages(
+async function getUpgradablePackages(
   packages: Package[],
   resolveLatestPkgVersions: Resolver
-): Promise<UpdatablePackage[]> {
-  const updatablePackages: UpdatablePackage[] = [];
+): Promise<UpgradablePackage[]> {
+  const updatablePackages: UpgradablePackage[] = [];
 
   for (const pkg of packages) {
     const resolvedVersion = await resolveLatestPkgVersions(pkg.info);
 
-    if (resolvedVersion.kind === ResolvedVersionsKind.SUCCESS) {
+    if (resolvedVersion.kind === UpgradePathsKind.SUCCESS) {
       if (
         resolvedVersion.currentVersion.displayVersion !==
           resolvedVersion.latestVersionMajor.displayVersion ||
