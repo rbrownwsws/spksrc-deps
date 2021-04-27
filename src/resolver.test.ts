@@ -59,7 +59,9 @@ describe("Testing resolution", () => {
         throw "Something has gone very wrong";
       }
 
-      expect(result.latestVersionMajor.displayVersion).toBe("4.0.0");
+      expect(result.majorVersionUpgradeRelease.version.displayVersion).toBe(
+        "4.0.0"
+      );
     });
 
     test("Minor 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.4.0", async () => {
@@ -74,7 +76,9 @@ describe("Testing resolution", () => {
         throw "Something has gone very wrong";
       }
 
-      expect(result.latestVersionMinor.displayVersion).toBe("2.4.0");
+      expect(result.minorVersionUpgradeRelease.version.displayVersion).toBe(
+        "2.4.0"
+      );
     });
 
     test("Patch 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.3.5", async () => {
@@ -89,7 +93,9 @@ describe("Testing resolution", () => {
         throw "Something has gone very wrong";
       }
 
-      expect(result.latestVersionPatch.displayVersion).toBe("2.3.5");
+      expect(result.patchVersionUpgradeRelease.version.displayVersion).toBe(
+        "2.3.5"
+      );
     });
   });
 });

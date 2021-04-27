@@ -75,13 +75,13 @@ export async function runApp(
 
     // TODO: Create mechanism in makefile to select what kind of version we
     //       want to create PRs for (e.g. PKG_DEP_WARN=MINOR)
-    const updateVersion = update.version.latestVersionMinor;
+    const updateVersion = update.version.minorVersionUpgradeRelease;
 
     // Do not bother creating a PR if there is not an update on the selected
     // update channel.
     if (
-      update.version.currentVersion.displayVersion ===
-      updateVersion.displayVersion
+      update.version.currentVersionRelease.version.displayVersion ===
+      updateVersion.version.displayVersion
     ) {
       console.info(
         msgPrefix +
@@ -93,7 +93,10 @@ export async function runApp(
     }
 
     const prBranch =
-      "deps/" + update.pkg.path.display + "/" + updateVersion.displayVersion;
+      "deps/" +
+      update.pkg.path.display +
+      "/" +
+      updateVersion.version.displayVersion;
 
     if (
       branches.all.some(
@@ -122,7 +125,9 @@ export async function runApp(
     const makefile = path.join(fullPkgPath, "Makefile");
     const patchResponse = child_process.spawnSync("sed", [
       "-i",
-      "s/^PKG_VERS\\s*=.*$/PKG_VERS = " + updateVersion.displayVersion + "/",
+      "s/^PKG_VERS\\s*=.*$/PKG_VERS = " +
+        updateVersion.version.displayVersion +
+        "/",
       makefile,
     ]);
 
@@ -164,7 +169,10 @@ export async function runApp(
     // TODO: Try to fix PLIST (e.g. update mylib.1.so -> mylib.2.so)
 
     const commitMessage =
-      "Bump " + update.pkg.path.display + " to " + updateVersion.displayVersion;
+      "Bump " +
+      update.pkg.path.display +
+      " to " +
+      updateVersion.version.displayVersion;
 
     core.info(msgPrefix + "Committing patch");
     await git.commit(commitMessage);
@@ -185,16 +193,16 @@ export async function runApp(
         "| Type | Version |\n" +
         "| - | - |\n" +
         "| Current |" +
-        update.version.currentVersion.rawVersion +
+        update.version.currentVersionRelease.version.rawVersion +
         " |\n" +
         "| Patch upgrade |" +
-        update.version.latestVersionPatch.rawVersion +
+        update.version.patchVersionUpgradeRelease.version.rawVersion +
         " |\n" +
         "| Minor upgrade |" +
-        update.version.latestVersionMinor.rawVersion +
+        update.version.minorVersionUpgradeRelease.version.rawVersion +
         " |\n" +
         "| Major upgrade |" +
-        update.version.latestVersionMajor.rawVersion +
+        update.version.majorVersionUpgradeRelease.version.rawVersion +
         " |",
     });
 
@@ -320,23 +328,23 @@ async function getUpgradablePackages(
 
     if (resolvedVersion.kind === UpgradePathsKind.SUCCESS) {
       if (
-        resolvedVersion.currentVersion.displayVersion !==
-          resolvedVersion.latestVersionMajor.displayVersion ||
-        resolvedVersion.currentVersion.displayVersion !==
-          resolvedVersion.latestVersionMinor.displayVersion ||
-        resolvedVersion.currentVersion.displayVersion !==
-          resolvedVersion.latestVersionPatch.displayVersion
+        resolvedVersion.currentVersionRelease.version.displayVersion !==
+          resolvedVersion.majorVersionUpgradeRelease.version.displayVersion ||
+        resolvedVersion.currentVersionRelease.version.displayVersion !==
+          resolvedVersion.minorVersionUpgradeRelease.version.displayVersion ||
+        resolvedVersion.currentVersionRelease.version.displayVersion !==
+          resolvedVersion.patchVersionUpgradeRelease.version.displayVersion
       ) {
         core.info(
           pkg.path.display +
             " is OLD: [" +
-            resolvedVersion.currentVersion.displayVersion +
+            resolvedVersion.currentVersionRelease.version.displayVersion +
             "] > " +
-            resolvedVersion.latestVersionPatch.displayVersion +
+            resolvedVersion.patchVersionUpgradeRelease.version.displayVersion +
             " >> " +
-            resolvedVersion.latestVersionMinor.displayVersion +
+            resolvedVersion.minorVersionUpgradeRelease.version.displayVersion +
             " >>> " +
-            resolvedVersion.latestVersionMajor.displayVersion
+            resolvedVersion.majorVersionUpgradeRelease.version.displayVersion
         );
         updatablePackages.push({
           pkg: pkg,

@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { PkgInfo } from "./pkgInfo";
-import { ReleaseIndexer } from "./releaseIndexers";
+import { Release, ReleaseIndexer } from "./releaseIndexers";
 import { Version, VersionParser } from "./versionParsers";
+
+export interface VersionedRelease {
+  version: Version;
+  release: Release;
+}
 
 export enum UpgradePathsKind {
   ERR_NO_INDEX = "ERR_NO_INDEX",
@@ -18,10 +23,10 @@ export interface UpgradePathsErr {
 
 export interface UpgradePathsSuccess {
   kind: UpgradePathsKind.SUCCESS;
-  currentVersion: Version;
-  latestVersionMajor: Version;
-  latestVersionMinor: Version;
-  latestVersionPatch: Version;
+  currentVersionRelease: VersionedRelease;
+  majorVersionUpgradeRelease: VersionedRelease;
+  minorVersionUpgradeRelease: VersionedRelease;
+  patchVersionUpgradeRelease: VersionedRelease;
 }
 
 export type UpgradePaths = UpgradePathsSuccess | UpgradePathsErr;
@@ -41,6 +46,23 @@ export const createResolver: (
     return { kind: UpgradePathsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
   }
 
+  // Create a temporary currentVersionRelease until we can make the real one
+  const currentVersionRelease: VersionedRelease = {
+    version: currentVersion,
+    release: {
+      name: pkgInfo.PKG_VERS,
+      artefacts: [],
+    },
+  };
+
+  const upgradePaths: UpgradePathsSuccess = {
+    kind: UpgradePathsKind.SUCCESS,
+    currentVersionRelease: currentVersionRelease,
+    majorVersionUpgradeRelease: currentVersionRelease,
+    minorVersionUpgradeRelease: currentVersionRelease,
+    patchVersionUpgradeRelease: currentVersionRelease,
+  };
+
   // Get an index of releases
   const releaseIndex = await releaseIndexer(pkgInfo);
 
@@ -50,52 +72,61 @@ export const createResolver: (
   }
 
   // Search for versions newer than the current version
-  let newestMajorVersion = currentVersion;
-  let newestMinorVersion = currentVersion;
-  let newestPatchVersion = currentVersion;
-
   const releaseIterator = releaseIndex();
   let release = await releaseIterator.next();
   while (!release.done) {
     const releaseVersion = versionParser.parse(release.value.name);
 
+    // TODO: Warn about versions we cannot parse?
+
+    // Check if this is the release we are currently using
+    if (
+      release.value.artefacts.some(
+        (artefact) =>
+          artefact.downloadUrl ===
+          pkgInfo.PKG_DIST_SITE + "/" + pkgInfo.PKG_DIST_NAME
+      )
+    ) {
+      upgradePaths.currentVersionRelease.release = release.value;
+    }
+
+    // See if this release is a better candidate for any upgrade path
     if (releaseVersion !== null) {
+      const versionedRelease: VersionedRelease = {
+        version: releaseVersion,
+        release: release.value,
+      };
+
       if (
         versionParser.isAllowedAsMajorUpgrade(
-          newestMajorVersion,
-          releaseVersion
+          upgradePaths.majorVersionUpgradeRelease.version,
+          versionedRelease.version
         )
       ) {
-        newestMajorVersion = releaseVersion;
+        upgradePaths.majorVersionUpgradeRelease = versionedRelease;
       }
 
       if (
         versionParser.isAllowedAsMinorUpgrade(
-          newestMinorVersion,
-          releaseVersion
+          upgradePaths.minorVersionUpgradeRelease.version,
+          versionedRelease.version
         )
       ) {
-        newestMinorVersion = releaseVersion;
+        upgradePaths.minorVersionUpgradeRelease = versionedRelease;
       }
 
       if (
         versionParser.isAllowedAsPatchUpgrade(
-          newestPatchVersion,
-          releaseVersion
+          upgradePaths.patchVersionUpgradeRelease.version,
+          versionedRelease.version
         )
       ) {
-        newestPatchVersion = releaseVersion;
+        upgradePaths.patchVersionUpgradeRelease = versionedRelease;
       }
     }
 
     release = await releaseIterator.next();
   }
 
-  return {
-    kind: UpgradePathsKind.SUCCESS,
-    currentVersion: currentVersion,
-    latestVersionMajor: newestMajorVersion,
-    latestVersionMinor: newestMinorVersion,
-    latestVersionPatch: newestPatchVersion,
-  };
+  return upgradePaths;
 };
