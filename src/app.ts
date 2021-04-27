@@ -3,7 +3,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
-import simpleGit, { SimpleGit } from "simple-git";
+import simpleGit, { ResetMode, SimpleGit } from "simple-git";
 
 import * as child_process from "child_process";
 
@@ -131,9 +131,11 @@ export async function runApp(
     ]);
 
     if (patchResponse.error) {
-      core.error(patchResponse.error.message);
+      core.error(msgPrefix + patchResponse.error.message);
 
-      // TODO: Clean up so things do not go horribly wrong from this point on
+      core.info(msgPrefix + "Aborting and cleaning up");
+      git.reset(ResetMode.HARD);
+
       continue;
     }
 
@@ -149,6 +151,15 @@ export async function runApp(
       fullPkgPath,
       "digests",
     ]);
+
+    if (mkDigests.error) {
+      core.error(msgPrefix + mkDigests.error.message);
+
+      core.info(msgPrefix + "Aborting and cleaning up");
+      git.reset(ResetMode.HARD);
+
+      continue;
+    }
 
     // TODO: Check `make digests` worked
 
