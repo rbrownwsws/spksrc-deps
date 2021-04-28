@@ -2,7 +2,7 @@
 
 import { PackageInfo } from "./packageInfo";
 import { Release, ReleaseIndexer } from "./releaseIndexers";
-import { Version, VersionParser } from "./versionParsers";
+import { Version, VersionParser, VersionComparator } from "./version";
 
 export interface VersionedRelease {
   version: Version;
@@ -35,13 +35,15 @@ export type UpgradeResolver = (pkgInfo: PackageInfo) => Promise<UpgradePaths>;
 
 export const createUpgradeResolver: (
   releaseIndexer: ReleaseIndexer,
-  versionParser: VersionParser
+  parseVersion: VersionParser,
+  versionComparator: VersionComparator
 ) => UpgradeResolver = (
   releaseIndexer: ReleaseIndexer,
-  versionParser: VersionParser
+  parseVersion: VersionParser,
+  versionComparator: VersionComparator
 ) => async (pkgInfo: PackageInfo) => {
   // Clean up package version
-  const currentVersion = versionParser.parse(pkgInfo.PKG_VERS);
+  const currentVersion = parseVersion(pkgInfo.PKG_VERS);
   if (currentVersion === null) {
     return { kind: UpgradePathsKind.ERR_UNSUPPORTED_VERSION_SYNTAX };
   }
@@ -75,7 +77,7 @@ export const createUpgradeResolver: (
   const releaseIterator = releaseIndex();
   let release = await releaseIterator.next();
   while (!release.done) {
-    const releaseVersion = versionParser.parse(release.value.name);
+    const releaseVersion = parseVersion(release.value.name);
 
     // TODO: Warn about versions we cannot parse?
 
@@ -96,7 +98,7 @@ export const createUpgradeResolver: (
       };
 
       if (
-        versionParser.isAllowedAsMajorUpgrade(
+        versionComparator.isAllowedAsMajorUpgrade(
           upgradePaths.majorVersionUpgradeRelease.version,
           versionedRelease.version
         )
@@ -105,7 +107,7 @@ export const createUpgradeResolver: (
       }
 
       if (
-        versionParser.isAllowedAsMinorUpgrade(
+        versionComparator.isAllowedAsMinorUpgrade(
           upgradePaths.minorVersionUpgradeRelease.version,
           versionedRelease.version
         )
@@ -114,7 +116,7 @@ export const createUpgradeResolver: (
       }
 
       if (
-        versionParser.isAllowedAsPatchUpgrade(
+        versionComparator.isAllowedAsPatchUpgrade(
           upgradePaths.patchVersionUpgradeRelease.version,
           versionedRelease.version
         )

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { Version } from "./versionParsers";
+import { Version } from "./version";
 import child_process, { SpawnSyncReturns } from "child_process";
 
 export type PackagePatcher = (

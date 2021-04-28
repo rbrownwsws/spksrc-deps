@@ -1,27 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import semver from "semver";
-import { Version, VersionParser } from "./versionParser";
 
-const npmSemverSymbol = Symbol();
+import { Version } from "../version";
+import { VersionComparator } from "./versionComparator";
+import { npmSemver } from "../kind";
 
-export const createNpmSemverVersionParser: () => VersionParser = () => {
+export const createNpmSemverVersionComparator: () => VersionComparator = () => {
   return {
-    parse: (rawVersion: string) => {
-      const parsedVersion = semver.valid(semver.coerce(rawVersion));
-
-      if (parsedVersion === null) {
-        return null;
-      } else {
-        return {
-          kind: npmSemverSymbol,
-          rawVersion: rawVersion,
-          displayVersion: parsedVersion,
-        };
-      }
-    },
-
-    getSupportedVersionKinds: () => [npmSemverSymbol],
+    getSupportedVersionKinds: () => [npmSemver],
 
     isAllowedAsMajorUpgrade: (oldVersion: Version, newVersion: Version) =>
       semver.gt(newVersion.displayVersion, oldVersion.displayVersion),

@@ -7,7 +7,10 @@ import {
   UpgradePaths,
   UpgradePathsKind,
 } from "./upgradeResolver";
-import { createNpmSemverVersionParser } from "./versionParsers";
+import {
+  createNpmSemverVersionComparator,
+  createNpmSemverVersionParser,
+} from "./version";
 
 function createDummyPkgInfo(): PackageInfo {
   return {
@@ -52,7 +55,8 @@ describe("Testing resolution", () => {
 
     const resolve = createUpgradeResolver(
       indexer,
-      createNpmSemverVersionParser()
+      createNpmSemverVersionParser(),
+      createNpmSemverVersionComparator()
     );
     const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: "2.3.4" };
 
