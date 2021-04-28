@@ -34,8 +34,10 @@ class GitVcs implements Vcs {
   }
 
   public async abortPatch() {
+    const patchBranch = (await this.git.branchLocal()).current;
     await this.git.reset(ResetMode.HARD);
     await this.reset();
+    await this.git.deleteLocalBranch(patchBranch);
   }
 
   public async addFileToPatch(file: string) {
