@@ -10,6 +10,8 @@ import * as child_process from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 
+import { MakeRunner } from "./makeRunner";
+
 import {
   UpgradePathsKind,
   UpgradePathsSuccess,
@@ -39,6 +41,7 @@ export async function runApp(
   githubToken: string,
   owner: string,
   repo: string,
+  runMake: MakeRunner,
   resolveLatestPkgVersions: UpgradeResolver
 ): Promise<void> {
   core.startGroup("Find package paths");
@@ -47,7 +50,7 @@ export async function runApp(
   core.endGroup();
 
   core.startGroup("Generate pkg-info.json files");
-  generatePkgInfoFiles(workspacePath);
+  generatePkgInfoFiles(workspacePath, runMake);
   core.endGroup();
 
   core.startGroup("Read package info");
@@ -151,11 +154,7 @@ export async function runApp(
 
     core.info(msgPrefix + "Generating digests");
     const digestsFile = path.join(fullPkgPath, "digests");
-    const mkDigests = child_process.spawnSync("make", [
-      "-C",
-      fullPkgPath,
-      "digests",
-    ]);
+    const mkDigests = runMake(fullPkgPath, "digests");
 
     if (mkDigests.error) {
       core.error(msgPrefix + mkDigests.error.message);
@@ -253,13 +252,9 @@ function findPackagePaths(workspacePath: string, pkgPrefixes: string[]) {
   return pkgPaths;
 }
 
-function generatePkgInfoFiles(workspacePath: string) {
+function generatePkgInfoFiles(workspacePath: string, runMake: MakeRunner) {
   // Get make to generate package info
-  const mkPkgInfo = child_process.spawnSync("make", [
-    "-C",
-    workspacePath,
-    "pkg-info",
-  ]);
+  const mkPkgInfo = runMake(workspacePath, "pkg-info");
 
   if (mkPkgInfo.error !== undefined) {
     throw mkPkgInfo.error;

@@ -15,6 +15,7 @@ import {
 } from "./versionParsers";
 import { createUpgradeResolver } from "./upgradeResolver";
 import { runApp } from "./app";
+import { runMake } from "./makeRunner";
 
 async function main(): Promise<void> {
   try {
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
       githubToken,
       github.context.repo.owner,
       github.context.repo.repo,
+      runMake,
       resolveLatestPkgVersions
     );
   } catch (error) {
