@@ -285,7 +285,28 @@ async function createPullRequests(
       head: upgradePatch.branch,
       title: upgradePatch.description,
       body:
-        "# Version info:\n" +
+        "## *WARNING*\n" +
+        "\n" +
+        "This is an auto-generated patch and will need human intervention " +
+        "before it is safe to merge. " +
+        "See the `Pre-merge checklist` for the base set of tasks you should" +
+        "perform before merging.\n" +
+        "\n" +
+        "You may also want to consider upgrading to a different version than " +
+        "has been automatically chosen. See the `Version Info` section for " +
+        "more details.\n" +
+        "\n" +
+        "## Pre-merge checklist:\n" +
+        "\n" +
+        "- [ ] Check package still builds for supported arches\n" +
+        "- [ ] Check if `PLIST` needs to be updated\n" +
+        "- [ ] Check that this package and any dependent packages still work " +
+        "as expected\n" +
+        "- [ ] Check if there are any SPKs (e.g.: `spk/" +
+        upgradePatch.upgrade.pkg.path.dir +
+        "`) that need to be updated when this package is upgraded\n" +
+        "\n" +
+        "## Version info:\n" +
         "\n" +
         "| Type | Version |\n" +
         "| - | - |\n" +
