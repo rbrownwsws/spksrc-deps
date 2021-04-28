@@ -3,3 +3,4 @@
 export { VersionComparator } from "./versionComparator";
 export { createMultiKindVersionComparator } from "./multiKindVersionComparator";
 export { createNpmSemverVersionComparator } from "./npmSemverVersionComparator";
+export { createDefaultVersionComparator } from "./defaultVersionComparator";

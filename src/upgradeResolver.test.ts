@@ -8,8 +8,8 @@ import {
   UpgradePathsKind,
 } from "./upgradeResolver";
 import {
-  createNpmSemverVersionComparator,
-  createAggressiveNpmSemverVersionParser,
+  createDefaultVersionComparator,
+  createDefaultVersionParser,
 } from "./version";
 
 function createDummyPkgInfo(): PackageInfo {
@@ -40,27 +40,30 @@ function createFakeReleaseIndexer(releaseVersions: string[]): ReleaseIndexer {
     };
 }
 
-describe("Testing resolution", () => {
-  describe("of SemVer", () => {
-    /* Given */
-    const indexer = createFakeReleaseIndexer([
-      "1.0.0",
-      "2.0.0",
-      "2.3.4",
-      "2.3.5",
-      "2.4.0",
-      "3.0.0",
-      "4.0.0",
-    ]);
+interface TargetVersions {
+  current: string;
+  majorTarget: string;
+  minorTarget: string;
+  patchTarget: string;
+}
 
-    const resolve = createUpgradeResolver(
-      indexer,
-      createAggressiveNpmSemverVersionParser(),
-      createNpmSemverVersionComparator()
-    );
-    const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: "2.3.4" };
+function resolverTest(availableVersions: string[], target: TargetVersions) {
+  /* Given */
+  const indexer = createFakeReleaseIndexer(availableVersions);
+  const resolve = createUpgradeResolver(
+    indexer,
+    createDefaultVersionParser(),
+    createDefaultVersionComparator()
+  );
+  const pkgInfo = { ...createDummyPkgInfo(), PKG_VERS: target.current };
 
-    test("Major 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 4.0.0", async () => {
+  test(
+    target.current +
+      " MAJOR upgrade from [" +
+      availableVersions +
+      "] = " +
+      target.majorTarget,
+    async () => {
       /* When */
       const result: UpgradePaths = await resolve(pkgInfo);
 
@@ -73,11 +76,18 @@ describe("Testing resolution", () => {
       }
 
       expect(result.majorVersionUpgradeRelease.version.displayVersion).toBe(
-        "4.0.0"
+        target.majorTarget
       );
-    });
+    }
+  );
 
-    test("Minor 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.4.0", async () => {
+  test(
+    target.current +
+      " MINOR upgrade from [" +
+      availableVersions +
+      "] = " +
+      target.minorTarget,
+    async () => {
       /* When */
       const result: UpgradePaths = await resolve(pkgInfo);
 
@@ -90,11 +100,18 @@ describe("Testing resolution", () => {
       }
 
       expect(result.minorVersionUpgradeRelease.version.displayVersion).toBe(
-        "2.4.0"
+        target.minorTarget
       );
-    });
+    }
+  );
 
-    test("Patch 2.3.4 vs [1.0.0, 2.0.0, 2.3.4, 2.3.5, 2.4.0, 3.0.0, 4.0.0] = 2.3.5", async () => {
+  test(
+    target.current +
+      " PATCH upgrade from [" +
+      availableVersions +
+      "] = " +
+      target.patchTarget,
+    async () => {
       /* When */
       const result: UpgradePaths = await resolve(pkgInfo);
 
@@ -107,8 +124,54 @@ describe("Testing resolution", () => {
       }
 
       expect(result.patchVersionUpgradeRelease.version.displayVersion).toBe(
-        "2.3.5"
+        target.patchTarget
       );
-    });
+    }
+  );
+}
+
+describe("Testing resolution", () => {
+  describe("of clean SemVer", () => {
+    resolverTest(
+      ["1.0.0", "2.0.0", "2.3.4", "2.3.5", "2.4.0", "3.0.0", "4.0.0"],
+      {
+        current: "2.3.4",
+        majorTarget: "4.0.0",
+        minorTarget: "2.4.0",
+        patchTarget: "2.3.5",
+      }
+    );
+  });
+
+  describe('of "v" prefixed SemVer', () => {
+    resolverTest(
+      ["v1.0.0", "v2.0.0", "v2.3.4", "v2.3.5", "v2.4.0", "v3.0.0", "v4.0.0"],
+      {
+        current: "2.3.4",
+        majorTarget: "4.0.0",
+        minorTarget: "2.4.0",
+        patchTarget: "2.3.5",
+      }
+    );
+  });
+
+  describe("of name prefixed SemVer", () => {
+    resolverTest(
+      [
+        "OTP-1.0.0",
+        "OTP-2.0.0",
+        "OTP-2.3.4",
+        "OTP-2.3.5",
+        "OTP-2.4.0",
+        "OTP-3.0.0",
+        "OTP-4.0.0",
+      ],
+      {
+        current: "2.3.4",
+        majorTarget: "4.0.0",
+        minorTarget: "2.4.0",
+        patchTarget: "2.3.5",
+      }
+    );
   });
 });

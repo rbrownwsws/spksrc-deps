@@ -4,3 +4,4 @@ export { VersionParser } from "./versionParser";
 export { createMultiKindVersionParser } from "./multiKindVersionParser";
 export { createAggressiveNpmSemverVersionParser } from "./aggressiveNpmSemverVersionParser";
 export { createConservativeNpmSemverVersionParser } from "./conservativeNpmSemverVersionParser";
+export { createDefaultVersionParser } from "./defaultVersionParser";

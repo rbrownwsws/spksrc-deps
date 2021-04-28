@@ -10,11 +10,8 @@ import {
   createGithubReleaseIndexer,
 } from "./releaseIndexers";
 import {
-  createMultiKindVersionParser,
-  createConservativeNpmSemverVersionParser,
-  createAggressiveNpmSemverVersionParser,
-  createMultiKindVersionComparator,
-  createNpmSemverVersionComparator,
+  createDefaultVersionParser,
+  createDefaultVersionComparator,
 } from "./version";
 import { createUpgradeResolver } from "./upgradeResolver";
 import { runApp } from "./app";
@@ -46,19 +43,10 @@ async function main(): Promise<void> {
       createGithubReleaseIndexer(octokit),
     ]);
 
-    const parseVersion = createMultiKindVersionParser([
-      createConservativeNpmSemverVersionParser(),
-      createAggressiveNpmSemverVersionParser(),
-    ]);
-
-    const versionComparator = createMultiKindVersionComparator([
-      createNpmSemverVersionComparator(),
-    ]);
-
     const resolveLatestPkgVersions = createUpgradeResolver(
       releaseIndexer,
-      parseVersion,
-      versionComparator
+      createDefaultVersionParser(),
+      createDefaultVersionComparator()
     );
 
     // Run the app

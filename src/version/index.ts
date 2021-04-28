@@ -9,10 +9,12 @@ export {
   createMultiKindVersionParser,
   createConservativeNpmSemverVersionParser,
   createAggressiveNpmSemverVersionParser,
+  createDefaultVersionParser,
 } from "./parser";
 
 export {
   VersionComparator,
   createMultiKindVersionComparator,
   createNpmSemverVersionComparator,
+  createDefaultVersionComparator,
 } from "./comparator";
