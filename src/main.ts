@@ -22,13 +22,15 @@ async function main(): Promise<void> {
     // Get the workspace directory path
     const workspacePath = process.env.GITHUB_WORKSPACE;
     if (workspacePath === undefined) {
-      throw { message: "GITHUB_WORKSPACE was not provided" };
+      core.setFailed("GITHUB_WORKSPACE was not provided");
+      return;
     }
 
     // Get token for interacting with github api
     const githubToken = process.env.GITHUB_TOKEN;
     if (githubToken === undefined) {
-      throw { message: "GITHUB_TOKEN was not provided" };
+      core.setFailed("GITHUB_TOKEN was not provided");
+      return;
     }
     const octokit = github.getOctokit(githubToken) as Octokit;
 
