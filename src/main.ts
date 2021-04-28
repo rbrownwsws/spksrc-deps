@@ -8,7 +8,7 @@ import { Octokit } from "@octokit/rest";
 import {
   createMultiSourceReleaseIndexer,
   createGithubReleaseIndexer,
-} from "./releaseIndexers";
+} from "./release";
 import {
   createDefaultVersionParser,
   createDefaultVersionComparator,

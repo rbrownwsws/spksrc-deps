@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { PackageInfo } from "../packageInfo";
+import { PackageInfo } from "../../packageInfo";
 import { ReleaseIndexer, ReleaseIndex } from "./releaseIndexer";
 
 export const createMultiSourceReleaseIndexer: (

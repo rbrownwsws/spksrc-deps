@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Octokit } from "@octokit/rest";
-import { PackageInfo } from "../packageInfo";
+import { PackageInfo } from "../../packageInfo";
 import { Release, ReleaseIndexer } from "./releaseIndexer";
 
 const githubRegex = /^https?:\/\/github.com\/([^/]*)\/([^/]*)\//;

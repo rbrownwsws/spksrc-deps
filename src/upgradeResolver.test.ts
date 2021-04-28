@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { PackageInfo } from "./packageInfo";
-import { ReleaseIndexer } from "./releaseIndexers";
+import { ReleaseIndexer } from "./release";
 import {
   createUpgradeResolver,
   UpgradePaths,
