@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { PkgInfo } from "./pkgInfo";
+import { PackageInfo } from "./packageInfo";
 import { Release, ReleaseIndexer } from "./releaseIndexers";
 import { Version, VersionParser } from "./versionParsers";
 
@@ -31,7 +31,7 @@ export interface UpgradePathsSuccess {
 
 export type UpgradePaths = UpgradePathsSuccess | UpgradePathsErr;
 
-export type UpgradeResolver = (pkgInfo: PkgInfo) => Promise<UpgradePaths>;
+export type UpgradeResolver = (pkgInfo: PackageInfo) => Promise<UpgradePaths>;
 
 export const createUpgradeResolver: (
   releaseIndexer: ReleaseIndexer,
@@ -39,7 +39,7 @@ export const createUpgradeResolver: (
 ) => UpgradeResolver = (
   releaseIndexer: ReleaseIndexer,
   versionParser: VersionParser
-) => async (pkgInfo: PkgInfo) => {
+) => async (pkgInfo: PackageInfo) => {
   // Clean up package version
   const currentVersion = versionParser.parse(pkgInfo.PKG_VERS);
   if (currentVersion === null) {

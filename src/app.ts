@@ -6,29 +6,18 @@ import * as github from "@actions/github";
 import simpleGit, { ResetMode, SimpleGit } from "simple-git";
 
 import * as path from "path";
-import * as fs from "fs";
 
-import { MakeRunner } from "./makeRunner";
+import { runMake } from "./makeRunner";
 
 import {
   UpgradePathsKind,
   UpgradePathsSuccess,
   UpgradeResolver,
 } from "./upgradeResolver";
-import { PkgInfo } from "./pkgInfo";
 import { Octokit } from "@octokit/rest";
 import { PackagePatcher } from "./packagePatcher";
-
-interface PkgPath {
-  prefix: string;
-  dir: string;
-  display: string;
-}
-
-interface Package {
-  path: PkgPath;
-  info: PkgInfo;
-}
+import { PackageIndexer, PkgPath } from "./packageIndexer";
+import { Package, PackageInfoScraper } from "./packageInfoScraper";
 
 interface UpgradablePackage {
   pkg: Package;
@@ -40,9 +29,10 @@ export interface AppConfig {
   githubToken: string;
   owner: string;
   repo: string;
-  runMake: MakeRunner;
-  patchPackage: PackagePatcher;
+  findPackages: PackageIndexer;
+  getPackageInfo: PackageInfoScraper;
   resolveLatestPkgVersions: UpgradeResolver;
+  patchPackage: PackagePatcher;
 }
 
 export async function runApp({
@@ -50,20 +40,17 @@ export async function runApp({
   githubToken,
   owner,
   repo,
-  runMake,
-  patchPackage,
+  findPackages,
+  getPackageInfo,
   resolveLatestPkgVersions,
+  patchPackage,
 }: AppConfig): Promise<void> {
   core.startGroup("Find package paths");
   const pkgPrefixes = ["cross", "native"];
-  const pkgPaths: PkgPath[] = findPackagePaths(workspacePath, pkgPrefixes);
+  const pkgPaths: PkgPath[] = findPackages(workspacePath, pkgPrefixes);
   core.endGroup();
 
-  core.startGroup("Generate pkg-info.json files");
-  generatePkgInfoFiles(workspacePath, runMake);
-  core.endGroup();
-
-  core.startGroup("Read package info");
+  core.startGroup("Get package info");
   const packages: Package[] = getPackageInfo(workspacePath, pkgPaths);
   core.endGroup();
 
@@ -229,129 +216,41 @@ export async function runApp({
   core.info("Done");
 }
 
-function findPackagePaths(workspacePath: string, pkgPrefixes: string[]) {
-  const pkgPaths: PkgPath[] = [];
-
-  // Find all the package directories
-  for (const prefix of pkgPrefixes) {
-    const fullPrefixPath = path.join(workspacePath, prefix);
-
-    // Get all objects in dir
-    fs.readdirSync(fullPrefixPath)
-      // Turn the objects into PkgPath objects
-      .map((name) => {
-        return { prefix: prefix, dir: name, display: prefix + "/" + name };
-      })
-      // Filter out objects that are not directories
-      .filter((pkgPath) =>
-        fs.lstatSync(path.join(fullPrefixPath, pkgPath.dir)).isDirectory()
-      )
-      // Put objects into pkgPaths array
-      .forEach((pkgPath) => {
-        core.info("Found package: " + pkgPath.display);
-        pkgPaths.push(pkgPath);
-      });
-  }
-
-  return pkgPaths;
-}
-
-function generatePkgInfoFiles(workspacePath: string, runMake: MakeRunner) {
-  // Get make to generate package info
-  const mkPkgInfo = runMake(workspacePath, "pkg-info");
-
-  if (mkPkgInfo.error !== undefined) {
-    throw mkPkgInfo.error;
-  }
-}
-
-function getPackageInfo(workspacePath: string, pkgPaths: PkgPath[]): Package[] {
-  const packages: Package[] = [];
-
-  for (const pkgPath of pkgPaths) {
-    const pkgInfoFile = path.join(
-      workspacePath,
-      pkgPath.prefix,
-      pkgPath.dir,
-      "pkg-info.json"
-    );
-
-    if (!fs.existsSync(pkgInfoFile)) {
-      core.warning("Missing pkg-info.json for: " + pkgPath.display);
-
-      continue;
-    }
-
-    let rawPkgInfoData;
-    try {
-      rawPkgInfoData = fs.readFileSync(pkgInfoFile, "utf-8");
-    } catch (error) {
-      core.warning(
-        "Error while trying to read pkg-info.json for: " +
-          pkgPath.display +
-          ": " +
-          error
-      );
-
-      continue;
-    }
-
-    let pkgInfo: PkgInfo;
-    try {
-      pkgInfo = JSON.parse(rawPkgInfoData);
-    } catch (error) {
-      core.warning(
-        "Error while trying to parse pkg-info.json for: " +
-          pkgPath.display +
-          ": " +
-          error
-      );
-
-      continue;
-    }
-
-    core.info("Got package info for: " + pkgPath.display);
-    packages.push({
-      path: pkgPath,
-      info: pkgInfo,
-    });
-  }
-
-  return packages;
-}
-
 async function getUpgradablePackages(
   packages: Package[],
   resolveLatestPkgVersions: UpgradeResolver
 ): Promise<UpgradablePackage[]> {
   const updatablePackages: UpgradablePackage[] = [];
 
+  // For each package
   for (const pkg of packages) {
-    const resolvedVersion = await resolveLatestPkgVersions(pkg.info);
+    const upgradePaths = await resolveLatestPkgVersions(pkg.info);
 
-    if (resolvedVersion.kind === UpgradePathsKind.SUCCESS) {
+    // If we managed to resolve upgrades
+    if (upgradePaths.kind === UpgradePathsKind.SUCCESS) {
+      // If any of the "upgrade" releases are different from the current release
       if (
-        resolvedVersion.currentVersionRelease.version.displayVersion !==
-          resolvedVersion.majorVersionUpgradeRelease.version.displayVersion ||
-        resolvedVersion.currentVersionRelease.version.displayVersion !==
-          resolvedVersion.minorVersionUpgradeRelease.version.displayVersion ||
-        resolvedVersion.currentVersionRelease.version.displayVersion !==
-          resolvedVersion.patchVersionUpgradeRelease.version.displayVersion
+        upgradePaths.currentVersionRelease.version.displayVersion !==
+          upgradePaths.majorVersionUpgradeRelease.version.displayVersion ||
+        upgradePaths.currentVersionRelease.version.displayVersion !==
+          upgradePaths.minorVersionUpgradeRelease.version.displayVersion ||
+        upgradePaths.currentVersionRelease.version.displayVersion !==
+          upgradePaths.patchVersionUpgradeRelease.version.displayVersion
       ) {
         core.info(
           pkg.path.display +
             " is OLD: [" +
-            resolvedVersion.currentVersionRelease.version.displayVersion +
+            upgradePaths.currentVersionRelease.version.displayVersion +
             "] > " +
-            resolvedVersion.patchVersionUpgradeRelease.version.displayVersion +
+            upgradePaths.patchVersionUpgradeRelease.version.displayVersion +
             " >> " +
-            resolvedVersion.minorVersionUpgradeRelease.version.displayVersion +
+            upgradePaths.minorVersionUpgradeRelease.version.displayVersion +
             " >>> " +
-            resolvedVersion.majorVersionUpgradeRelease.version.displayVersion
+            upgradePaths.majorVersionUpgradeRelease.version.displayVersion
         );
         updatablePackages.push({
           pkg: pkg,
-          version: resolvedVersion,
+          version: upgradePaths,
         });
       } else {
         core.info(pkg.path.display + " is UP-TO-DATE.");

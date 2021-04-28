@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { PkgInfo } from "../pkgInfo";
+import { PackageInfo } from "../packageInfo";
 
 export interface ReleaseArtefact {
   name: string;
@@ -14,4 +14,6 @@ export interface Release {
 
 export type ReleaseIndex = () => AsyncIterator<Release, void, void>;
 
-export type ReleaseIndexer = (pkgInfo: PkgInfo) => Promise<ReleaseIndex | null>;
+export type ReleaseIndexer = (
+  pkgInfo: PackageInfo
+) => Promise<ReleaseIndex | null>;

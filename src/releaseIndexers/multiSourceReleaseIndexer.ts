@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { PkgInfo } from "../pkgInfo";
+import { PackageInfo } from "../packageInfo";
 import { ReleaseIndexer, ReleaseIndex } from "./releaseIndexer";
 
 export const createMultiSourceReleaseIndexer: (
   releaseIndexers: ReleaseIndexer[]
 ) => ReleaseIndexer = (releaseIndexers: ReleaseIndexer[]) => async (
-  pkgInfo: PkgInfo
+  pkgInfo: PackageInfo
 ) => {
   // Iterate through indexers until we find one that works
   let releaseIndex: ReleaseIndex | null = null;

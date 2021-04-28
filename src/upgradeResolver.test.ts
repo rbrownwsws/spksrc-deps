@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { PkgInfo } from "./pkgInfo";
+import { PackageInfo } from "./packageInfo";
 import { ReleaseIndexer } from "./releaseIndexers";
 import {
   createUpgradeResolver,
@@ -9,7 +9,7 @@ import {
 } from "./upgradeResolver";
 import { createNpmSemverVersionParser } from "./versionParsers";
 
-function createDummyPkgInfo(): PkgInfo {
+function createDummyPkgInfo(): PackageInfo {
   return {
     PKG_NAME: "",
     PKG_VERS: "",
@@ -26,7 +26,7 @@ function createDummyPkgInfo(): PkgInfo {
 
 function createFakeReleaseIndexer(releaseVersions: string[]): ReleaseIndexer {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  return async (pkgInfo: PkgInfo) =>
+  return async (pkgInfo: PackageInfo) =>
     async function* () {
       for (const version of releaseVersions) {
         yield {

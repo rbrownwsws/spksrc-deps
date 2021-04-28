@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Octokit } from "@octokit/rest";
-import { PkgInfo } from "../pkgInfo";
+import { PackageInfo } from "../packageInfo";
 import { Release, ReleaseIndexer } from "./releaseIndexer";
 
 const githubRegex = /^https?:\/\/github.com\/([^/]*)\/([^/]*)\//;
 
 export const createGithubReleaseIndexer: (
   octokit: Octokit
-) => ReleaseIndexer = (octokit: Octokit) => async (pkgInfo: PkgInfo) => {
+) => ReleaseIndexer = (octokit: Octokit) => async (pkgInfo: PackageInfo) => {
   // Check if the package source is on github
   const matches = pkgInfo.PKG_DIST_SITE.match(githubRegex);
   if (matches === null) {

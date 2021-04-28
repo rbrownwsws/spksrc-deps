@@ -15,8 +15,9 @@ import {
 } from "./versionParsers";
 import { createUpgradeResolver } from "./upgradeResolver";
 import { runApp } from "./app";
-import { runMake } from "./makeRunner";
 import { patchPackage } from "./packagePatcher";
+import { defaultPackageIndexer } from "./packageIndexer";
+import { defaultPackageInfoScraper } from "./packageInfoScraper";
 
 async function main(): Promise<void> {
   try {
@@ -55,9 +56,10 @@ async function main(): Promise<void> {
       githubToken,
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
-      runMake,
-      patchPackage,
+      findPackages: defaultPackageIndexer,
+      getPackageInfo: defaultPackageInfoScraper,
       resolveLatestPkgVersions,
+      patchPackage,
     });
   } catch (error) {
     core.setFailed(error.message);
