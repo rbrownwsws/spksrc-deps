@@ -1,6 +1,19 @@
 name: spksrc-deps
 author: "Ross Brown <@rbrownwsws>"
 description: "Checks that spksrc packages are up-to-date"
+inputs:
+  createPatches:
+    description: Whether to create example patches for upgrading packages
+    required: false
+    default: "false"
+  createPullRequests:
+    description: Whether to create pull requests for the upgrade patches
+    required: false
+    default: "false"
+  createIssues:
+    description: Whether to create GitHub issues about outdated packages
+    required: false
+    default: "false"
 runs:
   using: "node12"
   main: "dist/main.js"

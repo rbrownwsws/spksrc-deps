@@ -51,6 +51,9 @@ async function main(): Promise<void> {
 
     // Run the app
     await runApp({
+      wantPatches: getBooleanInput("createPatches"),
+      wantPullRequests: getBooleanInput("createPullRequests"),
+      wantIssues: getBooleanInput("createIssues"),
       workspacePath,
       findPackages: defaultPackageIndexer,
       getPackageInfo: defaultPackageInfoScraper,
@@ -65,6 +68,24 @@ async function main(): Promise<void> {
     });
   } catch (error) {
     core.setFailed(error.message);
+  }
+}
+
+function getBooleanInput(inputName: string, required = false): boolean {
+  const rawInputValue = core.getInput(inputName, { required }).toLowerCase();
+
+  if (rawInputValue === "true") {
+    return true;
+  } else if (rawInputValue === "false") {
+    return false;
+  } else {
+    throw new Error(
+      'Input "' +
+        inputName +
+        '" can only be "true" or "false" but was set to "' +
+        rawInputValue +
+        '"'
+    );
   }
 }
 

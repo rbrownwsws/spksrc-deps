@@ -29,6 +29,9 @@ interface UpgradePatch {
 }
 
 export interface AppConfig {
+  wantPatches: boolean;
+  wantPullRequests: boolean;
+  wantIssues: boolean;
   workspacePath: string;
   findPackages: PackageIndexer;
   getPackageInfo: PackageInfoScraper;
@@ -39,6 +42,9 @@ export interface AppConfig {
 }
 
 export async function runApp({
+  wantPatches,
+  wantPullRequests,
+  wantIssues,
   workspacePath,
   findPackages,
   getPackageInfo,
@@ -65,54 +71,24 @@ export async function runApp({
 
   const vcs: Vcs = await getVcs(workspacePath);
 
-  core.startGroup("Create example patches for outdated packages");
-  const upgradePatches: UpgradePatch[] = await createUpgradePatches(
-    workspacePath,
-    vcs,
-    patchPackage,
-    upgradablePackages
-  );
-  core.endGroup();
+  if (wantPatches) {
+    core.startGroup("Create example patches for outdated packages");
+    const upgradePatches: UpgradePatch[] = await createUpgradePatches(
+      workspacePath,
+      vcs,
+      patchPackage,
+      upgradablePackages
+    );
+    core.endGroup();
 
-  core.startGroup("Create Pull Requests for outdated packages");
-  for (const upgradePatch of upgradePatches) {
-    const msgPrefix = "[" + upgradePatch.upgrade.pkg.path.display + "] ";
-
-    core.info(msgPrefix + "Pushing PR branch");
-    await vcs.pushPatch(upgradePatch.branch);
-
-    core.info(msgPrefix + "Creating pull request");
-    await project.createPullRequest({
-      head: upgradePatch.branch,
-      title: upgradePatch.description,
-      body:
-        "# Version info:\n" +
-        "\n" +
-        "| Type | Version |\n" +
-        "| - | - |\n" +
-        "| Current |" +
-        upgradePatch.upgrade.upgradePaths.currentVersionRelease.version
-          .rawVersion +
-        " |\n" +
-        "| Patch upgrade |" +
-        upgradePatch.upgrade.upgradePaths.patchVersionUpgradeRelease.version
-          .rawVersion +
-        " |\n" +
-        "| Minor upgrade |" +
-        upgradePatch.upgrade.upgradePaths.minorVersionUpgradeRelease.version
-          .rawVersion +
-        " |\n" +
-        "| Major upgrade |" +
-        upgradePatch.upgrade.upgradePaths.majorVersionUpgradeRelease.version
-          .rawVersion +
-        " |",
-    });
-
-    // TODO: Create issue using octokit?
-
-    // TODO: Close/delete any old pull requests using octokit?
+    if (wantPullRequests) {
+      core.startGroup("Create Pull Requests for outdated packages");
+      await createPullRequests(upgradePatches, vcs, project);
+      core.endGroup();
+    }
   }
-  core.endGroup();
+
+  // TODO: Create issue using octokit?
 
   await vcs.reset();
   core.info("Done");
@@ -275,4 +251,46 @@ async function createUpgradePatches(
   }
 
   return upgradePatches;
+}
+
+async function createPullRequests(
+  upgradePatches: UpgradePatch[],
+  vcs: Vcs,
+  project: Project
+) {
+  for (const upgradePatch of upgradePatches) {
+    const msgPrefix = "[" + upgradePatch.upgrade.pkg.path.display + "] ";
+
+    core.info(msgPrefix + "Pushing PR branch");
+    await vcs.pushPatch(upgradePatch.branch);
+
+    core.info(msgPrefix + "Creating pull request");
+    await project.createPullRequest({
+      head: upgradePatch.branch,
+      title: upgradePatch.description,
+      body:
+        "# Version info:\n" +
+        "\n" +
+        "| Type | Version |\n" +
+        "| - | - |\n" +
+        "| Current |" +
+        upgradePatch.upgrade.upgradePaths.currentVersionRelease.version
+          .rawVersion +
+        " |\n" +
+        "| Patch upgrade |" +
+        upgradePatch.upgrade.upgradePaths.patchVersionUpgradeRelease.version
+          .rawVersion +
+        " |\n" +
+        "| Minor upgrade |" +
+        upgradePatch.upgrade.upgradePaths.minorVersionUpgradeRelease.version
+          .rawVersion +
+        " |\n" +
+        "| Major upgrade |" +
+        upgradePatch.upgrade.upgradePaths.majorVersionUpgradeRelease.version
+          .rawVersion +
+        " |",
+    });
+
+    // TODO: Close/delete any old pull requests using octokit?
+  }
 }
