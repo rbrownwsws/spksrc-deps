@@ -50,15 +50,15 @@ async function main(): Promise<void> {
     );
 
     // Run the app
-    await runApp(
+    await runApp({
       workspacePath,
       githubToken,
-      github.context.repo.owner,
-      github.context.repo.repo,
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
       runMake,
       patchPackage,
-      resolveLatestPkgVersions
-    );
+      resolveLatestPkgVersions,
+    });
   } catch (error) {
     core.setFailed(error.message);
   }

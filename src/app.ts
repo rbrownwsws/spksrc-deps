@@ -17,7 +17,7 @@ import {
 } from "./upgradeResolver";
 import { PkgInfo } from "./pkgInfo";
 import { Octokit } from "@octokit/rest";
-import { PackagePatcher, patchPackage } from "./packagePatcher";
+import { PackagePatcher } from "./packagePatcher";
 
 interface PkgPath {
   prefix: string;
@@ -35,15 +35,25 @@ interface UpgradablePackage {
   version: UpgradePathsSuccess;
 }
 
-export async function runApp(
-  workspacePath: string,
-  githubToken: string,
-  owner: string,
-  repo: string,
-  runMake: MakeRunner,
-  packagePatcher: PackagePatcher,
-  resolveLatestPkgVersions: UpgradeResolver
-): Promise<void> {
+export interface AppConfig {
+  workspacePath: string;
+  githubToken: string;
+  owner: string;
+  repo: string;
+  runMake: MakeRunner;
+  patchPackage: PackagePatcher;
+  resolveLatestPkgVersions: UpgradeResolver;
+}
+
+export async function runApp({
+  workspacePath,
+  githubToken,
+  owner,
+  repo,
+  runMake,
+  patchPackage,
+  resolveLatestPkgVersions,
+}: AppConfig): Promise<void> {
   core.startGroup("Find package paths");
   const pkgPrefixes = ["cross", "native"];
   const pkgPaths: PkgPath[] = findPackagePaths(workspacePath, pkgPrefixes);
