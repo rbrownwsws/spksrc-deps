@@ -16,6 +16,7 @@ import {
 import { createUpgradeResolver } from "./upgradeResolver";
 import { runApp } from "./app";
 import { runMake } from "./makeRunner";
+import { patchPackage } from "./packagePatcher";
 
 async function main(): Promise<void> {
   try {
@@ -55,6 +56,7 @@ async function main(): Promise<void> {
       github.context.repo.owner,
       github.context.repo.repo,
       runMake,
+      patchPackage,
       resolveLatestPkgVersions
     );
   } catch (error) {

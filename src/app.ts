@@ -5,8 +5,6 @@ import * as github from "@actions/github";
 
 import simpleGit, { ResetMode, SimpleGit } from "simple-git";
 
-import * as child_process from "child_process";
-
 import * as path from "path";
 import * as fs from "fs";
 
@@ -19,6 +17,7 @@ import {
 } from "./upgradeResolver";
 import { PkgInfo } from "./pkgInfo";
 import { Octokit } from "@octokit/rest";
+import { PackagePatcher, patchPackage } from "./packagePatcher";
 
 interface PkgPath {
   prefix: string;
@@ -42,6 +41,7 @@ export async function runApp(
   owner: string,
   repo: string,
   runMake: MakeRunner,
+  packagePatcher: PackagePatcher,
   resolveLatestPkgVersions: UpgradeResolver
 ): Promise<void> {
   core.startGroup("Find package paths");
@@ -130,13 +130,7 @@ export async function runApp(
 
     core.info(msgPrefix + "Patching makefile");
     const makefile = path.join(fullPkgPath, "Makefile");
-    const patchResponse = child_process.spawnSync("sed", [
-      "-i",
-      "s/^PKG_VERS\\s*=.*$/PKG_VERS = " +
-        updateVersion.version.displayVersion +
-        "/",
-      makefile,
-    ]);
+    const patchResponse = patchPackage(makefile, updateVersion.version);
 
     if (patchResponse.error) {
       core.error(msgPrefix + patchResponse.error.message);
