@@ -19,6 +19,7 @@ import { patchPackage } from "./packagePatcher";
 import { defaultPackageIndexer } from "./packageIndexer";
 import { defaultPackageInfoScraper } from "./packageInfoScraper";
 import { createGitVcs } from "./vcs";
+import { getGitHubProject } from "./project";
 
 async function main(): Promise<void> {
   try {
@@ -54,14 +55,16 @@ async function main(): Promise<void> {
     // Run the app
     await runApp({
       workspacePath,
-      githubToken,
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
       findPackages: defaultPackageIndexer,
       getPackageInfo: defaultPackageInfoScraper,
       resolveLatestPkgVersions,
       getVcs: createGitVcs,
       patchPackage,
+      project: getGitHubProject(
+        octokit,
+        github.context.repo.owner,
+        github.context.repo.repo
+      ),
     });
   } catch (error) {
     core.setFailed(error.message);

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as core from "@actions/core";
-import * as github from "@actions/github";
 
 import * as path from "path";
 
@@ -12,39 +11,41 @@ import {
   UpgradePathsSuccess,
   UpgradeResolver,
 } from "./upgradeResolver";
-import { Octokit } from "@octokit/rest";
 import { PackagePatcher } from "./packagePatcher";
 import { PackageIndexer, PkgPath } from "./packageIndexer";
 import { Package, PackageInfoScraper } from "./packageInfoScraper";
 import { Vcs, VcsFactory } from "./vcs";
+import { Project } from "./project";
 
 interface UpgradablePackage {
   pkg: Package;
-  version: UpgradePathsSuccess;
+  upgradePaths: UpgradePathsSuccess;
+}
+
+interface UpgradePatch {
+  upgrade: UpgradablePackage;
+  branch: string;
+  description: string;
 }
 
 export interface AppConfig {
   workspacePath: string;
-  githubToken: string;
-  owner: string;
-  repo: string;
   findPackages: PackageIndexer;
   getPackageInfo: PackageInfoScraper;
   resolveLatestPkgVersions: UpgradeResolver;
   getVcs: VcsFactory;
   patchPackage: PackagePatcher;
+  project: Project;
 }
 
 export async function runApp({
   workspacePath,
-  githubToken,
-  owner,
-  repo,
   findPackages,
   getPackageInfo,
   resolveLatestPkgVersions,
   getVcs,
   patchPackage,
+  project,
 }: AppConfig): Promise<void> {
   core.startGroup("Find package paths");
   const pkgPrefixes = ["cross", "native"];
@@ -62,145 +63,58 @@ export async function runApp({
   );
   core.endGroup();
 
-  const octokit = github.getOctokit(githubToken) as Octokit;
   const vcs: Vcs = await getVcs(workspacePath);
 
   core.startGroup("Create example patches for outdated packages");
-  for (const update of upgradablePackages) {
-    const msgPrefix = "[" + update.pkg.path.display + "] ";
+  const upgradePatches: UpgradePatch[] = await createUpgradePatches(
+    workspacePath,
+    vcs,
+    patchPackage,
+    upgradablePackages
+  );
+  core.endGroup();
 
-    // TODO: Create mechanism in makefile to select what kind of version we
-    //       want to create PRs for (e.g. PKG_DEP_WARN=MINOR)
-    const updateVersion = update.version.minorVersionUpgradeRelease;
-
-    // Do not bother creating a PR if there is not an update on the selected
-    // update channel.
-    if (
-      update.version.currentVersionRelease.version.displayVersion ===
-      updateVersion.version.displayVersion
-    ) {
-      console.info(
-        msgPrefix +
-          "Skipping " +
-          update.pkg.path.display +
-          " because there are no updates on the selected channel."
-      );
-      continue;
-    }
-
-    const prBranch =
-      "deps/" +
-      update.pkg.path.display +
-      "/" +
-      updateVersion.version.displayVersion;
-
-    if (vcs.hasBranch(prBranch)) {
-      console.info(
-        msgPrefix +
-          "Skipping " +
-          update.pkg.path.display +
-          " because there is an existing PR branch."
-      );
-      continue;
-    }
-
-    core.info(msgPrefix + "Creating branch: " + prBranch);
-    await vcs.startNewPatch(prBranch);
-
-    const fullPkgPath = path.join(
-      workspacePath,
-      update.pkg.path.prefix,
-      update.pkg.path.dir
-    );
-
-    core.info(msgPrefix + "Patching makefile");
-    const makefile = path.join(fullPkgPath, "Makefile");
-    const patchResponse = patchPackage(makefile, updateVersion.version);
-
-    if (patchResponse.error) {
-      core.error(msgPrefix + patchResponse.error.message);
-
-      core.info(msgPrefix + "Aborting and cleaning up");
-      await vcs.abortPatch;
-
-      continue;
-    }
-
-    await vcs.addFileToPatch(makefile);
-
-    // TODO: rerun `make pkg-info.json` and try to check the patch did what we
-    //       wanted (in case of fancy stuff being done with PKG_VERS).
-
-    core.info(msgPrefix + "Generating digests");
-    const digestsFile = path.join(fullPkgPath, "digests");
-    const mkDigests = runMake(fullPkgPath, "digests");
-
-    if (mkDigests.error) {
-      core.error(msgPrefix + mkDigests.error.message);
-
-      core.info(msgPrefix + "Aborting and cleaning up");
-      await vcs.abortPatch();
-
-      continue;
-    }
-
-    // TODO: Check `make digests` worked
-
-    await vcs.addFileToPatch(digestsFile);
-
-    // TODO: Try to fix PLIST (e.g. update mylib.1.so -> mylib.2.so)
-
-    const commitMessage =
-      "Bump " +
-      update.pkg.path.display +
-      " to " +
-      updateVersion.version.displayVersion;
-
-    core.info(msgPrefix + "Committing patch");
-    await vcs.finishPatch(commitMessage);
+  core.startGroup("Create Pull Requests for outdated packages");
+  for (const upgradePatch of upgradePatches) {
+    const msgPrefix = "[" + upgradePatch.upgrade.pkg.path.display + "] ";
 
     core.info(msgPrefix + "Pushing PR branch");
-    await vcs.pushPatch(prBranch);
+    await vcs.pushPatch(upgradePatch.branch);
 
     core.info(msgPrefix + "Creating pull request");
-    const prCreateResponse = await octokit.rest.pulls.create({
-      owner: owner,
-      repo: repo,
-      head: prBranch,
-      base: "master",
-      title: commitMessage,
+    await project.createPullRequest({
+      head: upgradePatch.branch,
+      title: upgradePatch.description,
       body:
         "# Version info:\n" +
         "\n" +
         "| Type | Version |\n" +
         "| - | - |\n" +
         "| Current |" +
-        update.version.currentVersionRelease.version.rawVersion +
+        upgradePatch.upgrade.upgradePaths.currentVersionRelease.version
+          .rawVersion +
         " |\n" +
         "| Patch upgrade |" +
-        update.version.patchVersionUpgradeRelease.version.rawVersion +
+        upgradePatch.upgrade.upgradePaths.patchVersionUpgradeRelease.version
+          .rawVersion +
         " |\n" +
         "| Minor upgrade |" +
-        update.version.minorVersionUpgradeRelease.version.rawVersion +
+        upgradePatch.upgrade.upgradePaths.minorVersionUpgradeRelease.version
+          .rawVersion +
         " |\n" +
         "| Major upgrade |" +
-        update.version.majorVersionUpgradeRelease.version.rawVersion +
+        upgradePatch.upgrade.upgradePaths.majorVersionUpgradeRelease.version
+          .rawVersion +
         " |",
     });
-
-    const cooldown = 30000;
-    core.info(
-      msgPrefix + "Wait for " + cooldown + "ms to avoid GitHub abuse rate limit"
-    );
-    await new Promise((resolve) => setTimeout(resolve, cooldown));
 
     // TODO: Create issue using octokit?
 
     // TODO: Close/delete any old pull requests using octokit?
   }
+  core.endGroup();
 
   await vcs.reset();
-  core.endGroup();
   core.info("Done");
 }
 
@@ -238,7 +152,7 @@ async function getUpgradablePackages(
         );
         updatablePackages.push({
           pkg: pkg,
-          version: upgradePaths,
+          upgradePaths: upgradePaths,
         });
       } else {
         core.info(pkg.path.display + " is UP-TO-DATE.");
@@ -249,4 +163,116 @@ async function getUpgradablePackages(
   }
 
   return updatablePackages;
+}
+
+async function createUpgradePatches(
+  workspacePath: string,
+  vcs: Vcs,
+  patchPackage: PackagePatcher,
+  upgradablePackages: UpgradablePackage[]
+) {
+  const upgradePatches: UpgradePatch[] = [];
+
+  for (const upgradablePackage of upgradablePackages) {
+    const msgPrefix = "[" + upgradablePackage.pkg.path.display + "] ";
+
+    // TODO: Create mechanism in makefile to select what kind of version we
+    //       want to create PRs for (e.g. PKG_DEP_WARN=MINOR)
+    const upgradeVersion =
+      upgradablePackage.upgradePaths.minorVersionUpgradeRelease;
+
+    // Do not bother creating a PR if there is not an update on the selected
+    // update channel.
+    if (
+      upgradablePackage.upgradePaths.currentVersionRelease.version
+        .displayVersion === upgradeVersion.version.displayVersion
+    ) {
+      console.info(
+        msgPrefix +
+          "Skipping " +
+          upgradablePackage.pkg.path.display +
+          " because there are no updates on the selected channel."
+      );
+      continue;
+    }
+
+    const branch =
+      "deps/" +
+      upgradablePackage.pkg.path.display +
+      "/" +
+      upgradeVersion.version.displayVersion;
+
+    if (vcs.hasBranch(branch)) {
+      console.info(
+        msgPrefix +
+          "Skipping " +
+          upgradablePackage.pkg.path.display +
+          " because there is an existing PR branch."
+      );
+      continue;
+    }
+
+    core.info(msgPrefix + "Creating branch: " + branch);
+    await vcs.startNewPatch(branch);
+
+    const fullPkgPath = path.join(
+      workspacePath,
+      upgradablePackage.pkg.path.prefix,
+      upgradablePackage.pkg.path.dir
+    );
+
+    core.info(msgPrefix + "Patching makefile");
+    const makefile = path.join(fullPkgPath, "Makefile");
+    const patchResponse = patchPackage(makefile, upgradeVersion.version);
+
+    if (patchResponse.error) {
+      core.error(msgPrefix + patchResponse.error.message);
+
+      core.info(msgPrefix + "Aborting and cleaning up");
+      await vcs.abortPatch;
+
+      continue;
+    }
+
+    await vcs.addFileToPatch(makefile);
+
+    // TODO: rerun `make pkg-info.json` and try to check the patch did what we
+    //       wanted (in case of fancy stuff being done with PKG_VERS).
+
+    core.info(msgPrefix + "Generating digests");
+    const digestsFile = path.join(fullPkgPath, "digests");
+    const mkDigests = runMake(fullPkgPath, "digests");
+
+    if (mkDigests.error) {
+      core.error(msgPrefix + mkDigests.error.message);
+
+      core.info(msgPrefix + "Aborting and cleaning up");
+      await vcs.abortPatch();
+
+      continue;
+    }
+
+    // TODO: Check `make digests` worked
+
+    await vcs.addFileToPatch(digestsFile);
+
+    // TODO: Try to fix PLIST (e.g. update mylib.1.so -> mylib.2.so)
+
+    const commitMessage =
+      "Bump " +
+      upgradablePackage.pkg.path.display +
+      " to " +
+      upgradeVersion.version.displayVersion;
+
+    core.info(msgPrefix + "Committing patch");
+    await vcs.finishPatch(commitMessage);
+
+    upgradePatches.push({
+      upgrade: upgradablePackage,
+      branch: branch,
+      description: commitMessage,
+    });
+  }
+
+  return upgradePatches;
 }
