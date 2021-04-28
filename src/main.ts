@@ -11,7 +11,8 @@ import {
 } from "./releaseIndexers";
 import {
   createMultiKindVersionParser,
-  createNpmSemverVersionParser,
+  createConservativeNpmSemverVersionParser,
+  createAggressiveNpmSemverVersionParser,
   createMultiKindVersionComparator,
   createNpmSemverVersionComparator,
 } from "./version";
@@ -46,7 +47,8 @@ async function main(): Promise<void> {
     ]);
 
     const parseVersion = createMultiKindVersionParser([
-      createNpmSemverVersionParser(),
+      createConservativeNpmSemverVersionParser(),
+      createAggressiveNpmSemverVersionParser(),
     ]);
 
     const versionComparator = createMultiKindVersionComparator([

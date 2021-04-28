@@ -4,7 +4,7 @@ import semver from "semver";
 import { VersionParser } from "./versionParser";
 import { npmSemver } from "../kind";
 
-export const createNpmSemverVersionParser: () => VersionParser = () => (
+export const createAggressiveNpmSemverVersionParser: () => VersionParser = () => (
   rawVersion: string
 ) => {
   const parsedVersion = semver.valid(semver.coerce(rawVersion));

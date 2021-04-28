@@ -7,7 +7,8 @@ export { npmSemver } from "./kind";
 export {
   VersionParser,
   createMultiKindVersionParser,
-  createNpmSemverVersionParser,
+  createConservativeNpmSemverVersionParser,
+  createAggressiveNpmSemverVersionParser,
 } from "./parser";
 
 export {
