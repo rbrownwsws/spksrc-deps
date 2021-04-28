@@ -2,7 +2,8 @@
 
 import * as core from "@actions/core";
 
-import * as path from "path";
+import path from "path";
+import fs from "fs";
 
 import { runMake } from "./makeRunner";
 
@@ -217,8 +218,10 @@ async function createUpgradePatches(
 
     core.info(msgPrefix + "Generating digests");
     const digestsFile = path.join(fullPkgPath, "digests");
-    const mkDigests = runMake(fullPkgPath, "digests");
 
+    const preUpgradeDigests = fs.readFileSync(digestsFile);
+
+    const mkDigests = runMake(fullPkgPath, "digests");
     if (mkDigests.error) {
       core.error(msgPrefix + mkDigests.error.message);
 
@@ -228,7 +231,20 @@ async function createUpgradePatches(
       continue;
     }
 
-    // TODO: Check `make digests` worked
+    const postUpgradeDigests = fs.readFileSync(digestsFile);
+
+    // Check the digests file updated
+    if (preUpgradeDigests.equals(postUpgradeDigests)) {
+      core.error(
+        msgPrefix +
+          "The digests file was not updated. The patch must not have worked."
+      );
+
+      core.info(msgPrefix + "Aborting and cleaning up");
+      await vcs.abortPatch();
+
+      continue;
+    }
 
     await vcs.addFileToPatch(digestsFile);
 
