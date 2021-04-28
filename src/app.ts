@@ -3,8 +3,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
-import simpleGit, { ResetMode, SimpleGit } from "simple-git";
-
 import * as path from "path";
 
 import { runMake } from "./makeRunner";
@@ -18,6 +16,7 @@ import { Octokit } from "@octokit/rest";
 import { PackagePatcher } from "./packagePatcher";
 import { PackageIndexer, PkgPath } from "./packageIndexer";
 import { Package, PackageInfoScraper } from "./packageInfoScraper";
+import { Vcs, VcsFactory } from "./vcs";
 
 interface UpgradablePackage {
   pkg: Package;
@@ -32,6 +31,7 @@ export interface AppConfig {
   findPackages: PackageIndexer;
   getPackageInfo: PackageInfoScraper;
   resolveLatestPkgVersions: UpgradeResolver;
+  getVcs: VcsFactory;
   patchPackage: PackagePatcher;
 }
 
@@ -43,6 +43,7 @@ export async function runApp({
   findPackages,
   getPackageInfo,
   resolveLatestPkgVersions,
+  getVcs,
   patchPackage,
 }: AppConfig): Promise<void> {
   core.startGroup("Find package paths");
@@ -61,19 +62,10 @@ export async function runApp({
   );
   core.endGroup();
 
-  core.startGroup("Create example patches for outdated packages");
-  const git: SimpleGit = simpleGit(workspacePath);
-
   const octokit = github.getOctokit(githubToken) as Octokit;
+  const vcs: Vcs = await getVcs(workspacePath);
 
-  await git.addConfig("user.name", "spksrc-deps");
-  await git.addConfig("user.email", "spksrc-deps@synocommunity.github.io");
-
-  // Make sure we have all the remote branches, not just the one we cloned.
-  await git.fetch();
-  const branches = await git.branch();
-  const originalBranch = branches.current;
-
+  core.startGroup("Create example patches for outdated packages");
   for (const update of upgradablePackages) {
     const msgPrefix = "[" + update.pkg.path.display + "] ";
 
@@ -102,11 +94,7 @@ export async function runApp({
       "/" +
       updateVersion.version.displayVersion;
 
-    if (
-      branches.all.some(
-        (branch) => branch === prBranch || branch === "origin/" + prBranch
-      )
-    ) {
+    if (vcs.hasBranch(prBranch)) {
       console.info(
         msgPrefix +
           "Skipping " +
@@ -117,7 +105,7 @@ export async function runApp({
     }
 
     core.info(msgPrefix + "Creating branch: " + prBranch);
-    await git.checkout(["-b", prBranch, originalBranch]);
+    await vcs.startNewPatch(prBranch);
 
     const fullPkgPath = path.join(
       workspacePath,
@@ -133,12 +121,12 @@ export async function runApp({
       core.error(msgPrefix + patchResponse.error.message);
 
       core.info(msgPrefix + "Aborting and cleaning up");
-      git.reset(ResetMode.HARD);
+      await vcs.abortPatch;
 
       continue;
     }
 
-    await git.add(makefile);
+    await vcs.addFileToPatch(makefile);
 
     // TODO: rerun `make pkg-info.json` and try to check the patch did what we
     //       wanted (in case of fancy stuff being done with PKG_VERS).
@@ -151,14 +139,14 @@ export async function runApp({
       core.error(msgPrefix + mkDigests.error.message);
 
       core.info(msgPrefix + "Aborting and cleaning up");
-      git.reset(ResetMode.HARD);
+      await vcs.abortPatch();
 
       continue;
     }
 
     // TODO: Check `make digests` worked
 
-    await git.add(digestsFile);
+    await vcs.addFileToPatch(digestsFile);
 
     // TODO: Try to fix PLIST (e.g. update mylib.1.so -> mylib.2.so)
 
@@ -169,10 +157,10 @@ export async function runApp({
       updateVersion.version.displayVersion;
 
     core.info(msgPrefix + "Committing patch");
-    await git.commit(commitMessage);
+    await vcs.finishPatch(commitMessage);
 
     core.info(msgPrefix + "Pushing PR branch");
-    await git.push("origin", prBranch);
+    await vcs.pushPatch(prBranch);
 
     core.info(msgPrefix + "Creating pull request");
     const prCreateResponse = await octokit.rest.pulls.create({
@@ -211,7 +199,7 @@ export async function runApp({
     // TODO: Close/delete any old pull requests using octokit?
   }
 
-  git.checkout(originalBranch);
+  await vcs.reset();
   core.endGroup();
   core.info("Done");
 }

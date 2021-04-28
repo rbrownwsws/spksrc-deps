@@ -18,6 +18,7 @@ import { runApp } from "./app";
 import { patchPackage } from "./packagePatcher";
 import { defaultPackageIndexer } from "./packageIndexer";
 import { defaultPackageInfoScraper } from "./packageInfoScraper";
+import { createGitVcs } from "./vcs";
 
 async function main(): Promise<void> {
   try {
@@ -59,6 +60,7 @@ async function main(): Promise<void> {
       findPackages: defaultPackageIndexer,
       getPackageInfo: defaultPackageInfoScraper,
       resolveLatestPkgVersions,
+      getVcs: createGitVcs,
       patchPackage,
     });
   } catch (error) {
