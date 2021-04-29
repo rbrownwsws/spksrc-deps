@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Octokit } from "@octokit/rest";
-import core from "@actions/core";
+import * as core from "@actions/core";
 
 export interface PullRequestInfo {
   head: string;
